@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Legaluga UYAP Asistanı",
+  "short_name": "Legaluga UYAP",
+  "version": "1.0.1",
+  "description": "UYAP Avukat Portalı dosyalarınızı ad, soyad, dosya no veya mahkemeyle anında bulur, tek tıkla açar. Veriler yalnız cihazınızda.",
+  "homepage_url": "https://legaluga.com",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://avukat.uyap.gov.tr/*"
+  ],
+  "action": {
+    "default_title": "Legaluga UYAP Asistanı",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "Hızlı dosya aramasını aç"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://avukat.uyap.gov.tr/*"
+      ],
+      "js": [
+        "common.js",
+        "ui.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

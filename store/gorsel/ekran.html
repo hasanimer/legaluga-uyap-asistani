@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Legaluga UYAP Asistanı — mağaza görseli</title>
+<style>
+  html, body { margin: 0; }
+  body { width: 1280px; height: 800px; overflow: hidden; font-family: "Segoe UI", system-ui, sans-serif;
+    background: linear-gradient(135deg, #104b49 0%, #0f817e 62%, #48aaa3 100%); color: #fff; display: flex; align-items: center; }
+  .copy { flex: 1; padding: 0 56px 0 72px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 20px; letter-spacing: .01em; opacity: .95; }
+  .brand img { width: 40px; height: 40px; border-radius: 9px; }
+  h1 { font-size: 46px; line-height: 1.12; margin: 34px 0 18px; font-weight: 700; letter-spacing: -.01em; }
+  p.lead { font-size: 20px; line-height: 1.5; margin: 0 0 28px; color: #e8f7f5; max-width: 560px; }
+  ul { list-style: none; padding: 0; margin: 0; font-size: 18px; line-height: 1.5; }
+  li { display: flex; gap: 12px; margin: 10px 0; color: #f5faf9; }
+  li::before { content: ""; flex: none; width: 20px; height: 20px; margin-top: 3px; border-radius: 50%;
+    background: #e8f7f5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.5l3 3 6-7' fill='none' stroke='%230f817e' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/20px no-repeat; }
+  .foot { margin-top: 36px; font-size: 13px; color: #a7d9d2; }
+  .shot { flex: none; width: 480px; height: 700px; margin-right: 72px; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 30px 70px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.15); background: #f5f7fb; }
+</style>
+</head>
+<body>
+  <div class="copy">
+    <div class="brand"><img src="logo.svg" alt="">Legaluga UYAP Asistanı</div>
+    <h1 id="h"></h1>
+    <p class="lead" id="lead"></p>
+    <ul id="list"></ul>
+    <div class="foot">Legaluga ürünüdür. T.C. Adalet Bakanlığı veya UYAP ile resmî bir bağlantısı yoktur.</div>
+  </div>
+  <div class="shot" id="app"></div>
+<script src="veri.js"></script>
+<script src="../../extension/common.js"></script>
+<script src="../../extension/ui.js"></script>
+<script>
+  const SAHNE = {
+    1: { h: 'Müvekkilinizin adını yazın,<br>dosyası karşınızda.',
+         lead: 'UYAP’ta yargı türü, birim ve taraf seçerek sorgu yapmaya gerek yok. Ad, soyad, dosya no veya mahkeme adı yeterli.',
+         list: ['Türkçe karakter gerekmez: “yilmaz” yazın, YILMAZ bulunsun', 'Müvekkil ve karşı taraf vekili ayrı gösterilir', '“Dosya Görüntüle” ile dosya UYAP’ta tek tıkla açılır'],
+         q: 'yilmaz' },
+    2: { h: 'Filtreleyin, not alın,<br>künyeyi kopyalayın.',
+         lead: 'Açık/kapalı ve yargı türüne göre süzün, dosyalarınıza yalnız sizin gördüğünüz notlar ekleyin.',
+         list: ['Açık / Kapalı · Ceza / Hukuk / İcra filtreleri', 'Notlar aramaya dahildir', 'Künye tek tıkla panoya: “… 2026/214 E.”', 'Excel’e aktarma'],
+         q: '', filter: ['Açık', 'Hukuk'] },
+    3: { h: 'Verileriniz<br>bilgisayarınızda kalır.',
+         lead: 'Sunucu yok, hesap yok. Dosya listesi yalnız “Güncelle”ye bastığınızda, sizin açık UYAP oturumunuzdan alınır.',
+         list: ['Veriler hiçbir sunucuya gönderilmez', 'Yazarken UYAP’a istek gitmez', 'Şifre veya e-imza bilgisine erişilmez', 'Tek tıkla tüm yerel veriyi silin'],
+         q: '', settings: true }
+  };
+  const n = new URLSearchParams(location.search).get('n') || '1';
+  const s = SAHNE[n];
+  document.getElementById('h').innerHTML = s.h;
+  document.getElementById('lead').textContent = s.lead;
+  for (const t of s.list) { const li = document.createElement('li'); li.textContent = t; document.getElementById('list').append(li); }
+  const ui = UHD.mountUI(document.getElementById('app'), { mode: 'popup', onOpen() {}, onUpdate() {}, onStop() {} });
+  setTimeout(() => {
+    ui.setQuery(s.q);
+    for (const f of s.filter || []) [...ui.root.querySelectorAll('.chip')].find(c => c.textContent === f).click();
+    if (s.settings) [...ui.root.querySelectorAll('footer button')].find(b => b.textContent === 'Ayarlar').click();
+    document.activeElement && document.activeElement.blur();
+  }, 50);
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Sahte UYAP</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/devextreme-dist@25.1.6/css/dx.light.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/devextreme-dist@25.1.6/js/dx.all.js"></script>
+<style>body{font-family:Segoe UI,sans-serif;margin:0;padding:16px;background:#eef1f6} .card{background:#fff;padding:12px;border-radius:8px;margin-bottom:12px} .row{display:flex;gap:12px;flex-wrap:wrap} .row>div{width:300px} #log{font:12px monospace;white-space:pre-wrap;background:#111;color:#9f9;padding:8px;max-height:160px;overflow:auto}</style>
+</head>
+<body>
+<div id="nav"><b>Sahte UYAP</b> — yol: <span id="path"></span></div>
+<div class="row w-100" id="content-div2"><div id="page" style="width:100%"></div></div>
+<div id="log"></div>
+<script src="/mock/chrome-stub.js"></script>
+<script>
+const TURLER=[{tur:"Ceza",kod:"0"},{tur:"Hukuk",kod:"1"},{tur:"İcra",kod:"2"},{tur:"İdari Yargı",kod:"6"},{tur:"Satış Memurluğu",kod:"11"},{tur:"Arabuluculuk",kod:"25"},{tur:"Cbs",kod:"3"},{tur:"Tazminat Komisyonu Başkanlığı",kod:"26"}];
+const log = (...a) => { const l = document.getElementById('log'); l.textContent += a.join(' ') + '\n'; l.scrollTop = 1e9; };
+window.__mockLog = [];
+async function post(path, body){ window.__mockLog.push(path); const r = await fetch('/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const b = await r.arrayBuffer(); return JSON.parse(new TextDecoder('windows-1254').decode(b)); }
+
+function route(){
+  document.getElementById('path').textContent = location.pathname + location.search;
+  const page = $('#page'); page.find('.dx-widget').each(function(){ try{ $(this).dxDataGrid && $(this).data('dxDataGrid') && $(this).dxDataGrid('dispose'); }catch(e){} });
+  page.empty(); $('.dosya-sorgula-popup').remove();
+  if (location.pathname === '/dosya-sorgulama') renderSorgu(page);
+  else if (location.pathname === '/') renderHome(page);
+  else page.append('<div class="card">Sayfa Bulunamadı (404)</div>');
+}
+// UYAP ana sayfası: işaret "true" ise duyuruyu çekip pencereyi gösterir (kaynak koddaki gibi).
+function renderHome(page){
+  page.append('<div class="card">Ana sayfa</div>');
+  if (sessionStorage.getItem('showPopupDuyuru2') === 'true') setTimeout(() => { if (sessionStorage.getItem('showPopupDuyuru2') === 'true') showDuyuru(); }, 250);
+}
+function showDuyuru(){
+  window.__duyuruShown = (window.__duyuruShown || 0) + 1;
+  const p = $('<div>').appendTo('body').dxPopup({ visible:true, showCloseButton:false, title:'Duyuru', maxWidth:800, height:'auto',
+    contentTemplate: () => $('<div id="duyuruicerik">').text('Sistem bakım duyurusu…'),
+    toolbarItems:[{widget:'dxButton',toolbar:'bottom',location:'after',options:{text:'Tekrar Gösterme',onClick(){ sessionStorage.setItem('showPopupDuyuru2','false'); p.hide(); window.__duyuruClosedBy='tekrar'; }}},
+                  {widget:'dxButton',toolbar:'bottom',location:'after',options:{text:'Kapat',onClick(){ p.hide(); }}}] }).dxPopup('instance');
+}
+window.__mockLogin = () => { sessionStorage.setItem('showPopupDuyuru2','true'); history.pushState(null,'','/'); route(); };
+window.addEventListener('popstate', route);
+
+function renderSorgu(page){
+  const q = new URLSearchParams(localStorage.getItem('ignoreParams') ? '' : location.search);
+  const st = { tur: q.get('yargiTur') || '0', birim: q.get('yargiBirimi') || undefined, acik: (q.get('dosyaDurum')||'acik') === 'acik', searching:false };
+  const loading = $('<div class="card">Yükleniyor…</div>').appendTo(page);
+  setTimeout(() => {       // getDosyaAramaParameters gecikmesi
+    loading.remove();
+    const card = $('<div class="card"><div class="row"><div><label>Yargı Türü</label><div id="yargi-turu-detayli-arama"></div></div><div><label>Dosya Durumu</label><div id="dosya-durumu-detayli-arama"></div></div><div><label>Yargı Birimi</label><div id="yargi-birimi-detayli-arama"></div></div></div><div style="margin-top:10px"><span id="temizle"></span> <span id="sorgula"></span></div></div>').appendTo(page);
+    const results = $('<div class="card" id="sonuc">Lütfen Arama Yapınız.</div>').appendTo(page);
+    let birimBox;
+    const loadBirim = () => post('yargiBirimleriSorgula_brd.ajx',{yargiTuru:st.tur}).then(list => birimBox.option('dataSource', list));
+    card.find('#yargi-turu-detayli-arama').dxSelectBox({ dataSource:TURLER, displayExpr:'tur', valueExpr:'kod', value:st.tur, searchEnabled:true, inputAttr:{id:'yargiTur'},
+      onValueChanged(e){ st.tur = e.value; st.birim = undefined; birimBox.option('value', null); st.acik = true; loadBirim(); } });   // UYAP: W(false) formu sıfırlar, anahtarın görünümü değişmez
+    birimBox = card.find('#yargi-birimi-detayli-arama').dxSelectBox({ dataSource:[], displayExpr:'kod', valueExpr:'tablo', value:st.birim, searchEnabled:true, inputAttr:{id:'yargiBirim'},
+      onValueChanged(e){ st.birim = e.value; } }).dxSelectBox('instance');
+    setTimeout(loadBirim, 400);
+    card.find('#dosya-durumu-detayli-arama').dxSwitch({ value: st.acik, width:100, switchedOnText:'Açık', switchedOffText:'Kapalı', onValueChanged(e){ st.acik = e.value; } });
+    card.find('#temizle').dxButton({ text:'Temizle', type:'danger', stylingMode:'text' });
+    const btn = card.find('#sorgula').dxButton({ text:'Sorgula', icon:'search', type:'default', onClick(){
+      if (st.searching) return;
+      if (!st.birim) { log('UYARI: yargı birimi seçilmedi'); return; }
+      st.searching = true; btn.option({text:'Sorgulanıyor...', disabled:true});
+      log('SORGU', JSON.stringify({tur:st.tur,birim:st.birim,acik:st.acik}));
+      post('search_phrase_detayli.ajx',{dosyaDurumKod: st.acik?0:1, pageSize:500, pageNumber:1, birimId:'', birimTuru2:st.birim, birimTuru3:st.tur}).then(res => setTimeout(() => {
+        st.searching = false; btn.option({text:'Sorgula', disabled:false});
+        results.empty();
+        if (!res[0].length) { results.text('Lütfen Arama Yapınız.'); return; }
+        const REAL = localStorage.getItem('uyapLike');   // gerçek UYAP gibi: tablo ve düğmede id yok, sütun gizleme açık
+        if (localStorage.getItem('narrow')) results.css({width:'560px'});
+        const g = $(REAL ? '<div></div>' : '<div id="table-dosya-sorgulama"></div>').appendTo(results);
+        g.dxDataGrid({ dataSource: res[0], keyExpr:'dosyaId', showBorders:true, columnAutoWidth:true, wordWrapEnabled:true, columnHidingEnabled:!!REAL, searchPanel:{visible:true}, paging:{pageSize:10}, pager:{visible:true, showPageSizeSelector:true, allowedPageSizes:[10,20,50,100], showNavigationButtons:true},
+          columns:[{caption:'Birim',dataField:'birimAdi',hidingPriority:4},{caption:'Dosya No',dataField:'dosyaNo',hidingPriority:6},{caption:'Dosya Türü',dataField:'dosyaTur',hidingPriority:3},{caption:'Dosya Durumu',dataField:'dosyaDurum',hidingPriority:2},
+            {caption:'Dosya Görüntüle',hidingPriority:5,fixed:true,fixedPosition:'right',width:134,cellTemplate(c,o){
+              $(REAL ? '<div>' : '<div id="dosya-goruntule">').appendTo(c).dxButton({icon:'find',hint:'Pencere Görünümü',elementAttr:{'aria-label':'Pencere Görünümü'},onClick(){ openPopup(o.data); }});
+              $('<div id="detay-goruntule" style="margin-left:4px">').appendTo(c).dxButton({icon:'detailslayout',hint:'Kart Görünümü',elementAttr:{'aria-label':'Kart Görünümü'},onClick(){ log('YANLIŞ: kart görünümü'); }});
+            }},
+            {caption:'Sık Kullanılan',hidingPriority:0,fixed:true,fixedPosition:'right',width:120,cellTemplate(c,o){ $('<div id="ekle-dosya-sorgulama">').appendTo(c).dxButton({icon:'add',text:'Ekle',onClick(){ log('YANLIŞ: sık kullanılan'); }}); }}]
+        });
+      }, 700));
+    }}).dxButton('instance');
+  }, 300);
+}
+function openPopup(d){
+  log('AÇILDI', d.dosyaNo, d.birimAdi);
+  window.__opened = d.dosyaNo + ' | ' + d.birimAdi;
+  $('<div>').appendTo('body').dxPopup({ visible:true, width:'80vw', height:'60vh', wrapperAttr:{class:'dosya-sorgula-popup'}, title: d.dosyaNo + ' ' + d.birimAdi, contentTemplate: () => $('<div>').text('Dosya içeriği: ' + d.dosyaNo) });
+}
+route();
+</script>
+<script src="/ext/common.js"></script>
+<script src="/ext/ui.js"></script>
+<script src="/ext/content.js"></script>
+</body>
+</html>

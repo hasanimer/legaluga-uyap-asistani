@@ -1,0 +1,81 @@
+# Sahte UYAP sunucusu: eklentinin güncelleme ve düğme bulma akışını test etmek için.
+# Yanıtlar windows-1254 kodlamasıyla döner (gerçek UYAP yanıtlarında Türkçe karakterler UTF-8 değil).
+import json, os, sys
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+EXT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, '..', '..', 'extension')
+PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8765
+
+BIRIMLER = {
+    '0': [{"altSistKodu": -1, "tablo": "0901", "kod": "AĞIR CEZA MAHKEMESİ"},
+          {"altSistKodu": -1, "tablo": "0921", "kod": "ASLİYE CEZA MAHKEMESİ"}],
+    '1': [{"altSistKodu": -1, "tablo": "0101", "kod": "ASLİYE HUKUK MAHKEMESİ"}],
+    '2': [{"altSistKodu": -1, "tablo": "0501", "kod": "İCRA DAİRESİ"}],
+}
+ADLAR = ['AYŞE', 'MEHMET', 'ŞÜKRÜ', 'GÜLŞEN', 'İSMAİL', 'ÇAĞLA', 'ÖMER', 'IŞIL', 'ZEYNEP', 'HÜSEYİN']
+SOYADLAR = ['YILDIZ', 'ÖZTÜRK', 'ÇELİK', 'KAYA', 'ŞAHİN', 'DOĞAN', 'AYDIN', 'KILIÇ', 'ERDOĞAN', 'GÜNEŞ']
+
+def dosya(i, tur, birim, durum):
+    mah = {'0901': 'İstanbul Anadolu 3. Ağır Ceza Mahkemesi', '0921': f'İstanbul Anadolu {30 + i % 3}. Asliye Ceza Mahkemesi',
+           '0101': 'Ankara 5. Asliye Hukuk Mahkemesi', '0501': 'İzmir 2. İcra Dairesi'}[birim]
+    return {"dosyaId": f"\"ID-{tur}-{birim}-{durum}-{i}@x\"", "dosyaNo": f"{2020 + i % 6}/{100 + i + 50 * durum}",
+            "dosyaDurumKod": durum, "dosyaDurum": "Açık" if durum == 0 else "Kapalı",
+            "dosyaTurKod": 3, "dosyaTur": {"0": "Ceza Dava Dosyası", "1": "Hukuk Dava Dosyası", "2": "İcra Dosyası"}[tur],
+            "dosyaAcilisTarihi": {"date": {"year": 2020 + i % 6, "month": 1 + i % 12, "day": 1 + i % 28}, "time": {"hour": 10, "minute": 0, "second": 0, "nano": 0}},
+            "birimAdi": mah, "birimId": str(1000000 + hash(mah) % 99999), "birimTuru1": "09", "birimTuru2": birim, "birimTuru3": "0991"}
+
+DOSYALAR = {}
+for tur, bl in BIRIMLER.items():
+    for b in bl:
+        for durum in (0, 1):
+            n = 25 if (b['tablo'] == '0921' and durum == 0) else (3 if durum == 0 else 2)
+            DOSYALAR[(tur, b['tablo'], durum)] = [dosya(i, tur, b['tablo'], durum) for i in range(n)]
+BY_ID = {d['dosyaId']: d for v in DOSYALAR.values() for d in v}
+
+def taraflar(dosya_id):
+    h = sum(map(ord, dosya_id))
+    return [{"adi": f"{ADLAR[h % 10]} {SOYADLAR[(h // 10) % 10]}", "rol": "Sanık" if 'Ceza' in BY_ID[dosya_id]['dosyaTur'] else "Davalı", "kisiKurum": "Kişi", **({"vekil": "[DENİZ KARAKAYA]"} if h % 3 == 0 else {})},
+            {"adi": f"{ADLAR[(h // 7) % 10]} {SOYADLAR[(h // 3) % 10]}", "rol": "Mağdur" if 'Ceza' in BY_ID[dosya_id]['dosyaTur'] else "Davacı", "vekil": "[TEST AVUKAT]", "kisiKurum": "Kişi"}]
+
+class H(BaseHTTPRequestHandler):
+    def log_message(self, fmt, *a):
+        sys.stderr.write("%s\n" % (fmt % a))
+
+    def send(self, code, body, ctype):
+        self.send_response(code)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        p = self.path.split('?')[0]
+        if p.startswith('/ext/'):
+            f = os.path.join(EXT, p[5:])
+            if os.path.isfile(f):
+                return self.send(200, open(f, 'rb').read(), 'text/javascript; charset=utf-8' if f.endswith('.js') else 'text/css')
+            return self.send(404, b'', 'text/plain')
+        if p.startswith('/mock/'):
+            return self.send(200, open(os.path.join(HERE, p[6:]), 'rb').read(), 'text/javascript; charset=utf-8')
+        return self.send(200, open(os.path.join(HERE, 'mock.html'), 'rb').read(), 'text/html; charset=utf-8')
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers.get('Content-Length', 0))) or b'{}')
+        p = self.path.lstrip('/')
+        if p == 'yargiBirimleriSorgula_brd.ajx':
+            out = BIRIMLER.get(body.get('yargiTuru'), [])
+        elif p == 'search_phrase_detayli.ajx':
+            rows = DOSYALAR.get((body.get('birimTuru3'), body.get('birimTuru2'), body.get('dosyaDurumKod')), [])
+            if body.get('birimId'):
+                rows = [r for r in rows if r['birimId'] == body['birimId']]
+            size, page = body.get('pageSize', 500), body.get('pageNumber', 1)
+            out = [rows[(page - 1) * size: page * size], len(rows)]
+        elif p == 'dosya_taraf_bilgileri_brd.ajx':
+            out = taraflar(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
+        else:
+            out = {}
+        self.send(200, json.dumps(out, ensure_ascii=False).encode('windows-1254'), 'text/json')
+
+ThreadingHTTPServer(('127.0.0.1', PORT), H).serve_forever()

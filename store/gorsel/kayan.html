@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Legaluga UYAP Asistanı — kayan yazı tanıtım bloğu</title>
+<style>
+  html, body { margin: 0; }
+  body { width: 1400px; height: 560px; overflow: hidden; font-family: "Segoe UI", system-ui, sans-serif; color: #fff;
+    background: linear-gradient(120deg, #104b49 0%, #0f817e 60%, #48aaa3 100%); display: flex; align-items: center; }
+  .copy { flex: 1; padding: 0 40px 0 88px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 20px; }
+  .brand img { width: 40px; height: 40px; border-radius: 9px; }
+  h1 { font-size: 50px; line-height: 1.1; margin: 26px 0 16px; font-weight: 700; letter-spacing: -.01em; }
+  p { font-size: 21px; line-height: 1.45; margin: 0; color: #e8f7f5; max-width: 600px; }
+  .chips { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+  .chips span { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28); border-radius: 18px; padding: 6px 14px; font-size: 15px; }
+  .shot { flex: none; width: 480px; height: 640px; margin: 80px 88px 0 0; align-self: flex-start; border-radius: 14px 14px 0 0; overflow: hidden;
+    box-shadow: 0 30px 70px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.15); background: #f5f7fb; }
+</style>
+</head>
+<body>
+  <div class="copy">
+    <div class="brand"><img src="logo.svg" alt="">Legaluga UYAP Asistanı</div>
+    <h1>UYAP dosyanızı isimle bulun,<br>tek tıkla açın.</h1>
+    <p>Müvekkil adı, dosya no veya mahkeme yazın; dosya anında listelensin. Veriler yalnız bilgisayarınızda kalır.</p>
+    <div class="chips"><span>Müvekkil tespiti</span><span>Notlar</span><span>Filtreler</span><span>Sunucusuz</span></div>
+  </div>
+  <div class="shot" id="app"></div>
+<script src="veri.js"></script>
+<script src="../../extension/common.js"></script>
+<script src="../../extension/ui.js"></script>
+<script>
+  const ui = UHD.mountUI(document.getElementById('app'), { mode: 'popup', onOpen() {}, onUpdate() {}, onStop() {} });
+  setTimeout(() => { ui.setQuery('yilmaz'); document.activeElement && document.activeElement.blur(); }, 50);
+</script>
+</body>
+</html>
