@@ -1,7 +1,7 @@
 // Arama arayüzü: hem eklenti popup'ında hem UYAP sayfasındaki yan panelde aynı kod kullanılır.
 (() => {
   if (globalThis.UHD.mountUI) return;
-  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs, lastEvrak } = globalThis.UHD;
+  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs, lastEvrak, personFiles } = globalThis.UHD;
   const EVRAK_SHOW = 3;
   const LIMIT = 60;
   const RECENT_MAX = 10;
@@ -31,6 +31,19 @@
 .uhd .chip.new.on{background:#1849a9;border-color:#1849a9;color:#fff}
 .uhd .badge.new{background:#e0eaff;color:#1849a9}
 .uhd .son{margin-top:2px;font-size:12px;color:var(--muted)}
+.uhd .pname{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;text-decoration:underline dotted;text-underline-offset:2px}
+.uhd .pname:hover{color:var(--navy);text-decoration:underline}
+.uhd .person{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.uhd .person .top{display:flex;align-items:center;gap:8px}
+.uhd .person .top b{font-size:15px;color:var(--deep);flex:1}
+.uhd .person .back{border:1px solid #cfd6e4;background:#fff;border-radius:8px;padding:3px 9px;font:inherit;font-size:12px;cursor:pointer}
+.uhd .person .kind{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.uhd .person .sum{margin-top:4px;color:#344054}
+.uhd .person .warn{margin-top:6px;padding:5px 8px;border-radius:6px;background:#fff4e5;color:#7a4b00;font-size:12px}
+.uhd .person .hint{margin-top:6px;color:var(--muted);font-size:11px}
+.uhd .person .row{display:flex;gap:10px;margin-top:6px}
+.uhd .rolein{margin-top:3px;font-size:12px;color:var(--deep)}
+.uhd .rolein.other{color:#7a4b00}
 .uhd .son b{font-weight:600;color:#344054}
 .uhd .evrak{margin-top:5px;padding:5px 8px;border-left:3px solid #528bff;background:#f0f5ff;border-radius:0 6px 6px 0;font-size:12px;cursor:default}
 .uhd .evrak .head{display:flex;justify-content:space-between;gap:8px;font-weight:600;color:#1849a9}
@@ -193,6 +206,7 @@
     let manualNotice = false;
     let goruldu = {};
     let pendingJob = null;     // yarıda kalmış güncelleme işi (uhdJob)
+    let person = null;         // açık müvekkil kartı: { name }
     let yeniMap = new Map();   // kayıt key → en yeni görülmemiş evrakın onay zamanı
     let yeniCount = 0;         // görülmemiş yeni evrak sayısı
     let evrakTracked = false;  // en az bir dosyanın evrakları tarandı mı
@@ -295,6 +309,13 @@
 
     // ------------------------------------------------ sonuç satırı
 
+    // Taraf adı: tıklanınca o kişinin tüm dosyaları (müvekkil kartı) açılır.
+    function nameBtn(name, toks) {
+      const b = el('button', { class: 'pname', title: `${name}: tüm dosyaları göster` }, highlight(name, toks));
+      b.addEventListener('click', e => { e.stopPropagation(); openPerson(name); });
+      return b;
+    }
+
     function partyLines(r, toks, keys) {
       const out = [];
       if (!r.taraflar) return [el('div', { class: 'parties' }, el('em', null, 'Taraf bilgisi henüz alınmadı'))];
@@ -305,7 +326,7 @@
         const line = el('div', { class: 'client' }, 'Müvekkil: ');
         clients.forEach((p, i) => {
           if (i) line.append(', ');
-          line.append(el('b', null, highlight(p.adi, toks)), p.rol ? ` (${p.rol})` : '');
+          line.append(el('b', null, nameBtn(p.adi, toks)), p.rol ? ` (${p.rol})` : '');
         });
         out.push(line);
       }
@@ -324,7 +345,7 @@
           box.append(el('span', { class: 'rol' }, rol + ': '));
           ps.forEach((p, i) => {
             if (i) box.append(', ');
-            box.append(highlight(p.adi, toks));
+            box.append(nameBtn(p.adi, toks));
             const vek = (p.vekil || [])
               .filter(v => !keys.some(m => nameKey(v).includes(m)))
               .map(v => v.replace(/^av\.?\s+/i, ''));
@@ -406,7 +427,7 @@
       return el('div', { class: 'son', title: 'Dosyadaki en yeni evrak (son güncellemeye göre). ' + title }, 'Son evrak: ', el('b', null, s.onay), t.slice(s.onay.length));
     }
 
-    function item(r, i, toks, keys) {
+    function item(r, i, toks, keys, extra) {
       const closed = r.sorguDurum === 1;
       const open = el('button', { class: 'open', title: 'Dosyayı UYAP’ta Pencere Görünümü ile aç' }, 'Dosya Görüntüle');
       open.addEventListener('click', e => { e.stopPropagation(); openRecord(r); });
@@ -434,6 +455,7 @@
             yeniMap.has(r.key) ? el('span', { class: 'badge new' }, 'Yeni evrak') : null,
             [r.dosyaTur, r.acilis].filter(Boolean).join(' · ')),
           sonLine(r),
+          extra || null,
           partyEls,
           evrakBlock(r, toks),
           noteBlock(r, toks)),
@@ -455,7 +477,7 @@
       const scroll = list.scrollTop;
       list.replaceChildren();
       current = [];
-      filters.hidden = !records.length;
+      filters.hidden = !records.length || !!person;
       if (!records.length) {
         const run = running();
         const go = el('button', { disabled: run }, run ? 'İlk güncelleme sürüyor…' : 'Şimdi güncelle');
@@ -470,6 +492,7 @@
           el('p', { style: 'margin:12px 0 0;font-size:12px;color:var(--muted)' }, 'Ayrıntılar: ', el('a', { href: BRAND.site + '/gizlilik/uyap-asistani', target: '_blank', rel: 'noopener' }, 'gizlilik politikası'), '.')));
         return;
       }
+      if (person) return renderPerson();
       const keys = myKeys(myName());
       const q = input.value;
       const res = search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, limit: LIMIT });
@@ -505,6 +528,64 @@
       current.forEach((r, i) => list.append(item(r, i, res.tokens, keys)));
       if (res.total > current.length) list.append(el('div', { class: 'more' }, `${fmtNum(res.total)} sonuçtan ilk ${current.length} gösteriliyor. Aramayı daraltın.`));
       list.scrollTop = scroll;
+    }
+
+    // ------------------------------------------------ müvekkil kartı
+
+    function openPerson(name) {
+      person = { name };
+      editing = null;
+      sel = 0;
+      render();
+      list.scrollTop = 0;
+    }
+
+    function closePerson() {
+      person = null;
+      sel = 0;
+      render();
+      input.focus();
+    }
+
+    function renderPerson() {
+      const keys = myKeys(myName());
+      const files = personFiles(records, person.name, myName());
+      const acik = files.filter(f => f.r.sorguDurum !== 1).length;
+      const muvekkil = files.filter(f => f.roller.some(x => x.muvekkil));
+      const diger = files.filter(f => !f.roller.some(x => x.muvekkil));
+      const roller = new Map();
+      for (const f of files) for (const x of f.roller) roller.set(x.rol, (roller.get(x.rol) || 0) + 1);
+
+      const back = el('button', { class: 'back', title: 'Aramaya dön (Esc)' }, '← Geri');
+      back.addEventListener('click', closePerson);
+      const copyAll = el('button', { class: 'notebtn', title: 'Bu kişinin tüm dosyalarının künyelerini alt alta kopyala' }, 'Künyeleri kopyala');
+      copyAll.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(files.map(f => `${f.r.birimAdi} ${f.r.dosyaNo} E.`).join('\n'));
+          copyAll.textContent = 'Kopyalandı ✓';
+          copyAll.classList.add('done');
+        } catch { copyAll.textContent = 'Kopyalanamadı'; }
+      });
+      const head = el('div', { class: 'person' },
+        el('div', { class: 'kind' }, muvekkil.length ? 'Müvekkil kartı' : 'Kişi kartı'),
+        el('div', { class: 'top' }, el('b', null, person.name), back),
+        el('div', { class: 'sum' }, files.length
+          ? `${fmtNum(files.length)} dosya · ${fmtNum(acik)} açık · ${fmtNum(files.length - acik)} kapalı` +
+            (roller.size ? ' — ' + [...roller].map(([rol, n]) => `${rol} (${n})`).join(', ') : '')
+          : 'Bu adla kayıtlı dosya bulunamadı.'),
+        muvekkil.length && diger.length
+          ? el('div', { class: 'warn' }, `Dikkat: ${fmtNum(diger.length)} dosyada müvekkiliniz olarak değil, başka bir tarafın ya da vekilin tarafında geçiyor. Aynı adlı farklı bir kişi de olabilir; dosyaları kontrol edin.`)
+          : null,
+        files.length ? el('div', { class: 'row' }, copyAll) : null,
+        el('div', { class: 'hint' }, 'UYAP taraf listesinde kimlik numarası yer almadığından aynı ad-soyada sahip farklı kişiler birlikte listelenebilir.'));
+      list.append(head);
+      current = files.map(f => f.r);
+      if (sel >= current.length) sel = 0;
+      files.forEach((f, i) => {
+        const bizde = f.roller.some(x => x.muvekkil);
+        const rolText = f.roller.map(x => x.rol + (x.muvekkil ? ' · müvekkiliniz' : '')).join(', ');
+        list.append(item(f.r, i, [], keys, el('div', { class: 'rolein' + (bizde ? '' : ' other') }, `Bu dosyada: ${rolText}`)));
+      });
     }
 
     // ------------------------------------------------ kayıt işlemleri
@@ -598,6 +679,7 @@
     input.addEventListener('input', () => {
       sel = 0;
       editing = null;
+      person = null;
       clearTimeout(typeTimer);
       if (records.length > 3000) typeTimer = setTimeout(render, 90);
       else render();
@@ -606,6 +688,7 @@
       if (e.key === 'ArrowDown') { e.preventDefault(); select(sel + 1, true); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); select(sel - 1, true); }
       else if (e.key === 'Enter' && current[sel]) { e.preventDefault(); openRecord(current[sel]); }
+      else if (e.key === 'Escape' && person) { e.preventDefault(); closePerson(); }
       else if (e.key === 'Escape' && opts.onClose) { opts.onClose(); }
     });
     btnUpdate.addEventListener('click', () => { setNotice(''); opts.onUpdate(false); });

@@ -252,6 +252,28 @@
     }));
   }
 
+  // Müvekkil (kişi) kartı: adı normalleştirilmiş hâliyle birebir eşleşen tarafın geçtiği tüm dosyalar ve
+  // o dosyalardaki rolleri. UYAP taraf listesinde kimlik numarası olmadığından aynı adlı farklı kişiler ayrılamaz.
+  // Sıra: müvekkil olarak geçtiği dosyalar önce; her grupta açıklar önce, sonra son evrakı yeni olan, sonra yeni açılan.
+  function personFiles(records, name, myName) {
+    const key = nameKey(name);
+    const keys = myKeys(myName);
+    const out = [];
+    if (!key) return out;
+    for (const r of records || []) {
+      const ps = (r.taraflar || []).filter(p => nameKey(p.adi) === key);
+      if (ps.length) out.push({ r, roller: ps.map(p => ({ rol: p.rol || 'Taraf', muvekkil: isClient(p, keys) })) });
+    }
+    const son = x => trDateTs((lastEvrak(x.r) || {}).onay);
+    const bizde = x => x.roller.some(y => y.muvekkil);
+    out.sort((a, b) =>
+      bizde(b) - bizde(a) ||
+      (a.r.sorguDurum === 1) - (b.r.sorguDurum === 1) ||
+      son(b) - son(a) ||
+      (b.r.acilisTs || 0) - (a.r.acilisTs || 0));
+    return out;
+  }
+
   const unseenEvrak = (r, goruldu) => (r.yeniEvrak || []).filter(y => (y.at || 0) > ((goruldu && goruldu[r.key]) || 0));
 
   // UYAP'tan gelen değerler (taraf, vekil adı…) =, +, -, @ ya da sekme/satır başıyla başlıyorsa
@@ -267,5 +289,5 @@
   const fmtNum = n => Number(n || 0).toLocaleString('tr-TR');
   const fmtDate = ts => ts ? new Date(ts).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak };
+  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles };
 })();

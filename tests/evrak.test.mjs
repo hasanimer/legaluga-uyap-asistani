@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 createRequire(import.meta.url)('../extension/common.js');
-const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search, sonEvrak, lastEvrak } = globalThis.UHD;
+const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search, sonEvrak, lastEvrak, personFiles } = globalThis.UHD;
 
 // UYAP evrakId/dosyaId'yi her yanıtta yeniden şifreler; testte de her çağrıda farklı kimlik üretilir.
 let sayac = 0;
@@ -97,4 +97,22 @@ test('dosyadaki son evrak onay tarihine göre bulunur; eski kayıtlarda anahtarl
   assert.deepEqual(lastEvrak({ evrakSeen: seen }), { tur: 'Kapalı E-Tebliğ Mazbatası', onay: '02/08/2026', gonderim: undefined, dosya: undefined });
   assert.equal(lastEvrak({ sonEvrak: { onay: '01/01/2026', tur: 'X' }, evrakSeen: seen }).onay, '01/01/2026');
   assert.equal(lastEvrak({}), null);
+});
+
+test('müvekkil kartı: aynı kişinin tüm dosyaları, rolleri; açık ve son evrakı yeni olan önde', () => {
+  const kayit = (key, durum, onay, taraflar, acilisTs = 0) => ({ key, dosyaNo: key, birimAdi: 'X', sorguDurum: durum, acilisTs,
+    sonEvrak: onay ? { onay, tur: 'Ara Karar' } : undefined, taraflar });
+  const V = ['TEST AVUKAT'];
+  const records = [
+    kayit('kapali', 1, '01/09/2026', [{ adi: 'AYŞE YILMAZ', rol: 'Davacı', vekil: V }]),
+    kayit('eski', 0, '01/01/2026', [{ adi: 'Ayşe  Yılmaz', rol: 'Alacaklı', vekil: V }]),
+    kayit('yeni', 0, '05/09/2026', [{ adi: 'AYŞE YILMAZ', rol: 'Mağdur', vekil: V }]),
+    kayit('karsi', 0, null, [{ adi: 'AYŞE YILMAZ', rol: 'Davalı', vekil: ['DENİZ KARAKAYA'] }]),
+    kayit('baska', 0, '10/09/2026', [{ adi: 'AYŞE YILMAZER', rol: 'Davacı', vekil: V }])
+  ];
+  const f = personFiles(records, 'ayse yilmaz', 'Test Avukat');
+  assert.deepEqual(f.map(x => x.r.key), ['yeni', 'eski', 'kapali', 'karsi']);
+  assert.deepEqual(f[0].roller, [{ rol: 'Mağdur', muvekkil: true }]);
+  assert.deepEqual(f.find(x => x.r.key === 'karsi').roller, [{ rol: 'Davalı', muvekkil: false }]);
+  assert.deepEqual(personFiles(records, '', 'Test Avukat'), []);
 });

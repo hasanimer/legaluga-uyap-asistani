@@ -78,7 +78,16 @@ Her **Güncelle**'de açık dosyaların evrak listesi (UYAP'taki **Evrak Getir**
 
 Evrakların kendisi ve içerikleri indirilmez; yalnız liste bilgisi (tür, tarih, gönderen, açıklama, birim evrak no) saklanır. Kapalı dosyalar kontrol edilmez. Her açık dosya için UYAP'a bir istek daha gittiği için güncelleme biraz uzar; istemezseniz **Ayarlar → Güncellemede açık dosyalardaki yeni evrakları bul** işaretini kaldırın.
 
-### 5. Diğer özellikler
+### 5. Müvekkil kartı
+
+Sonuçlarda herhangi bir taraf adına tıklayın: o kişinin geçtiği **tüm dosyalar** tek ekranda listelenir. Üstte dosya sayısı, açık/kapalı dağılımı ve kişinin rolleri (ör. `Davacı (5), Mağdur (2)`) görünür. Her dosyada kişinin o dosyadaki rolü yazar. Müvekkiliniz olduğu dosyalar önce, açıklar önce ve son evrakı yeni olan önce sıralanır.
+
+- Kişi bir dosyada sizin müvekkiliniz olarak değil başka bir vekille (ya da vekilsiz) geçiyorsa kartta uyarı çıkar. Menfaat çatışması açısından kontrol etmeniz için; aynı adlı başka bir kişi de olabilir.
+- **Künyeleri kopyala** bütün dosyaların künyelerini alt alta panoya kopyalar.
+- **← Geri** ya da **Esc** aramaya döner; arama kutusuna yazmak da kartı kapatır.
+- UYAP taraf listesinde kimlik numarası olmadığından eşleştirme ad-soyadla yapılır; aynı ad-soyada sahip farklı kişiler birlikte listelenebilir.
+
+### 6. Diğer özellikler
 
 - **Kopyala:** Dosya künyesini (`Ankara 14. Asliye Hukuk Mahkemesi 2025/123 E.` biçiminde) panoya kopyalar; dilekçeye yapıştırmak için.
 - **Not ekle:** Dosyaya yalnız bu bilgisayarda görünen not yazın (Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer). Notlar aramada da bulunur.
