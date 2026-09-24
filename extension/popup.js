@@ -41,7 +41,7 @@ async function update(full) {
   try {
     const res = await chrome.tabs.sendMessage(tab.id, { type: 'uhd-update', full });
     if (!res || !res.ok) ui.setNotice((res && res.error) || 'Güncelleme başlatılamadı.', 'err');
-    else ui.setNotice('Güncelleme UYAP sekmesinde sürüyor. Bu pencereyi kapatabilirsiniz; sekmeyi kapatmayın.');
+    else ui.setNotice('Güncelleme UYAP sekmesinde sürüyor. Bu pencereyi kapatıp başka sekmelerde çalışabilirsiniz; UYAP sekmesi kapanırsa kaldığı yerden sürer.');
   } catch {
     ui.setNotice('UYAP sekmesi eklentiye yanıt vermedi. Sekmeyi yenileyip tekrar deneyin.', 'err', {
       label: 'Sekmeyi yenile',

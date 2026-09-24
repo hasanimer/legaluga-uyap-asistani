@@ -34,6 +34,18 @@
     },
     runtime: { onMessage: { addListener: fn => msgListeners.push(fn) } }
   };
+  // Gerçek chrome.storage gibi başka sekmedeki değişiklikleri de bildir (localStorage "storage" olayıyla).
+  window.addEventListener('storage', e => {
+    if (e.key !== KEY) return;
+    let o = {}, n = {};
+    try { o = JSON.parse(e.oldValue) || {}; } catch {}
+    try { n = JSON.parse(e.newValue) || {}; } catch {}
+    const ch = {};
+    for (const k of new Set([...Object.keys(o), ...Object.keys(n)])) {
+      if (JSON.stringify(o[k]) !== JSON.stringify(n[k])) ch[k] = { oldValue: o[k], newValue: n[k] };
+    }
+    if (Object.keys(ch).length) listeners.forEach(fn => fn(ch, 'local'));
+  });
   window.__uhdSend = msg => new Promise(res => { for (const fn of msgListeners) fn(msg, {}, res); });
   window.confirm = () => true;
 })();

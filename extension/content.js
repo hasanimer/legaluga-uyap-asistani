@@ -1,6 +1,8 @@
 // UYAP Avukat Portalı sekmesinde çalışır.
 // - Güncelleme: UYAP ekranının kendi kullandığı JSON uçlarıyla dosya listesi, taraf adları ve
 //   açık dosyaların evrak listesi alınır; evrak listesi önceki taramayla karşılaştırılıp yeni evraklar işaretlenir.
+//   Güncelleme kaldığı yerden sürdürülebilir bir iştir (uhdJob): sekme kapanırsa açık başka bir UYAP sekmesi,
+//   hiç yoksa UYAP bir sonraki açıldığında devralır; oturum düşerse yeniden girişte sürer.
 // - Dosya açma: Dosya Sorgulama ekranı açılır, form doldurulur, Sorgula'ya basılır,
 //   sonuçta ilgili satırın "Pencere Görünümü" düğmesine tıklanır.
 (() => {
@@ -13,6 +15,7 @@
   const TARAF_V = 2; // 2: taraflarla birlikte vekiller de saklanır
   const EVRAK_PAGES = 20;   // bir dosyanın evrak listesinde en çok bu kadar sayfa okunur
   const YENI_MAX = 50;      // dosya başına saklanan görülmemiş yeni evrak sayısı
+  const STALE_MS = 90000;   // bu süre sinyal gelmezse güncellemeyi yürüten sekme gitmiş sayılır
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pad = n => String(n).padStart(2, '0');
   const visible = e => !!e && e.isConnected && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
@@ -77,24 +80,94 @@
 
   // ---------------------------------------------------------------- Güncelleme
 
-  let job = null;
+  let job = null;   // bu sekmede yürüyen iş: { id, stop, lost }
+
+  // İstekler arası bekleme. Arka plandaki sekmede Chrome zamanlayıcıları en az 1 sn'ye yuvarladığı için
+  // orada yapay bekleme yapılmaz; istekler yine de sırayla, birer birer gider.
+  const pace = () => (document.hidden ? Promise.resolve() : sleep(DELAY));
 
   async function setProgress(p) {
-    await chrome.storage.local.set({ uhdProgress: { owner: OWNER, beat: Date.now(), ...p } });
+    if (job && job.lost) return;   // sayfa kapanıyor ya da iş başka sekmede: ilerleme kaydına dokunma
+    await chrome.storage.local.set({ uhdProgress: { owner: OWNER, beat: Date.now(), jobId: job && job.id, ...p } });
+  }
+
+  const alive = p => p && p.running && p.owner && p.owner !== OWNER && Date.now() - (p.beat || 0) < STALE_MS;
+
+  // Birden çok UYAP sekmesi aynı anda devralmaya kalkarsa son yazan kazanır; diğerleri çekilir.
+  async function claim(text) {
+    await setProgress({ running: true, text });
+    await sleep(300 + Math.random() * 300);
+    const { uhdProgress: p } = await chrome.storage.local.get('uhdProgress');
+    return !!p && p.owner === OWNER;
   }
 
   async function startUpdate(full) {
     if (job) return { ok: false, error: 'Güncelleme zaten sürüyor.' };
-    const { uhdProgress: p } = await chrome.storage.local.get('uhdProgress');
-    if (p && p.running && p.owner !== OWNER && Date.now() - (p.beat || 0) < 90000) {
-      return { ok: false, error: 'Başka bir UYAP sekmesinde güncelleme sürüyor.' };
+    const { uhdProgress: p, uhdJob: old } = await chrome.storage.local.get(['uhdProgress', 'uhdJob']);
+    if (alive(p)) return { ok: false, error: 'Güncelleme başka bir UYAP sekmesinde sürüyor.' };
+    // Yarıda kalmış iş varsa "Güncelle" onu sürdürür; "Tümünü yenile" yeni iş başlatır.
+    const resuming = !!(old && !old.stop && !full);
+    const j = resuming
+      ? { ...old, paused: null, listDone: old.paused === 'oturum' ? false : old.listDone }
+      : { id: Math.random().toString(36).slice(2), full: !!full, startedAt: Date.now(), listDone: false, stats: {} };
+    await chrome.storage.local.set({ uhdJob: j });
+    if (!(await claim(resuming ? 'Güncelleme kaldığı yerden sürdürülüyor…' : 'Güncelleme başlıyor…'))) {
+      return { ok: false, error: 'Güncelleme başka bir UYAP sekmesinde başladı.' };
     }
-    job = { stop: false };
-    runUpdate(!!full).finally(() => { job = null; });
+    run(j);
     return { ok: true };
   }
 
+  // Yarıda kalmış işi devral. Oturum düşmesiyle duraklayan iş yalnız sayfa yüklenirken (yeniden girişten sonra) sürer.
+  async function maybeResume(pageLoad) {
+    if (job) return;
+    const { uhdProgress: p, uhdJob: j } = await chrome.storage.local.get(['uhdProgress', 'uhdJob']);
+    if (!j || j.stop) return;
+    // Sekme yenilendiyse işi yürüten, bu sekmenin önceki hâliydi: sinyalin eskimesini beklemeden devral.
+    const wasMine = pageLoad && p && p.owner && p.owner === ssGet(SS_OWNER);
+    if (alive(p) && !wasMine) return;
+    if (j.paused === 'oturum' && !pageLoad) return;
+    if (!(await claim('Yarıda kalan güncelleme sürdürülüyor…'))) return;
+    const { uhdJob: cur } = await chrome.storage.local.get('uhdJob');
+    if (!cur || cur.id !== j.id || cur.stop) return setProgress({ running: false, endedAt: Date.now(), text: 'Güncelleme durduruldu.' });
+    const next = { ...cur, paused: null, listDone: cur.paused === 'oturum' ? false : cur.listDone };
+    await chrome.storage.local.set({ uhdJob: next });
+    log('Yarıda kalan güncelleme sürdürülüyor.');
+    run(next);
+  }
+
+  function run(j) {
+    job = { id: j.id, stop: false, lost: false };
+    ssSet(SS_OWNER, OWNER);
+    // Sekme kapanırsa arka plan betiği işi hemen serbest bıraksın (background.js).
+    try { chrome.runtime.sendMessage({ type: 'uhd-owner', owner: OWNER }).catch(() => {}); } catch {}
+    const mine = job;
+    runUpdate(j).finally(() => {
+      // Sayfa kapanırken çekildiyse not kalır: sekme yenilenince iş hemen devralınır.
+      if (!mine.lost) ssSet(SS_OWNER, null);
+      if (job === mine) job = null;
+    });
+  }
+
+  // Sekmeye özgü, yenilemede korunan küçük not (UYAP'ın sessionStorage'ı; yalnız rastgele sekme kimliği yazılır).
+  const SS_OWNER = 'legalugaUhdOwner';
+  function ssGet(k) { try { return sessionStorage.getItem(k); } catch { return null; } }
+  function ssSet(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} }
+
+  // Durdur: yürüyen iş hangi sekmedeyse depolama üzerinden durur; duraklamış iş iptal edilir.
+  async function stopUpdate() {
+    if (job) job.stop = true;
+    const { uhdJob: j, uhdProgress: p } = await chrome.storage.local.get(['uhdJob', 'uhdProgress']);
+    if (!j) return;
+    if (job || alive(p)) await chrome.storage.local.set({ uhdJob: { ...j, stop: true } });
+    else {
+      await chrome.storage.local.remove('uhdJob');
+      await chrome.storage.local.set({ uhdProgress: { running: false, text: 'Yarıda kalan güncelleme iptal edildi.', endedAt: Date.now() } });
+    }
+  }
+
   function checkStop() {
+    if (job && job.lost) throw new Stopped('lost');
     if (job && job.stop) throw new Stopped('Durduruldu');
   }
 
@@ -120,6 +193,7 @@
   }
 
   async function saveIndex(map) {
+    if (job && job.lost) return;   // iş başka sekmeye geçtiyse onun indeksinin üzerine yazma
     await chrome.storage.local.set({ uhdIndex: { v: 2, updatedAt: Date.now(), records: [...map.values()] } });
   }
 
@@ -128,7 +202,7 @@
     if (!Array.isArray(res)) {
       // UYAP'ın kendi penceresi önce işlem türlerini sorgular; gerekirse aynı sırayı izle.
       await api('dosya_islem_turleri_sorgula_brd.ajx', { dosyaId });
-      await sleep(DELAY);
+      await pace();
       res = await api('dosya_taraf_bilgileri_brd.ajx', { dosyaId });
     }
     if (!Array.isArray(res)) throw new Error('Taraf bilgisi okunamadı.');
@@ -149,7 +223,7 @@
     if (!ok(res)) {
       // UYAP'ın kendi penceresi önce işlem türlerini sorgular; gerekirse aynı sırayı izle.
       await api('dosya_islem_turleri_sorgula_brd.ajx', { dosyaId });
-      await sleep(DELAY);
+      await pace();
       res = await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: 1 });
     }
     const { items, bad } = parseEvraklar(res);
@@ -157,7 +231,7 @@
     let skipped = bad;
     for (let page = 2; page <= pages; page++) {
       checkStop();
-      await sleep(DELAY);
+      await pace();
       const more = parseEvraklar(await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: page }));
       items.push(...more.items);
       skipped += more.bad;
@@ -165,80 +239,100 @@
     return { items, bad: skipped };
   }
 
-  async function runUpdate(full) {
-    const startedAt = Date.now();
+  async function saveJob(j) {
+    const { uhdJob: cur } = await chrome.storage.local.get('uhdJob');
+    if (cur && cur.id === j.id && !cur.stop) await chrome.storage.local.set({ uhdJob: j });
+  }
+
+  async function runUpdate(j) {
+    const startedAt = j.startedAt;
+    const st = j.stats = { added: 0, errors: 0, evrakErrors: 0, evrakBad: 0, failed: 0, ...(j.stats || {}) };
     let merged = null;
-    let summary = '';
     try {
       const { uhdIndex, uhdPrefs } = await chrome.storage.local.get(['uhdIndex', 'uhdPrefs']);
       const evrakTakip = !(uhdPrefs && uhdPrefs.evrakKapali);
       const old = new Map(((uhdIndex && uhdIndex.records) || []).map(r => [r.key, r]));
-      const found = new Map();
-      const failed = new Set();
 
-      // 1) Dosya listesi: her yargı türü × birim türü × açık/kapalı.
-      for (const tur of TURLER) {
-        checkStop();
-        await setProgress({ running: true, phase: 'liste', text: `${tur.ad} birimleri alınıyor… (${found.size} dosya bulundu)` });
-        let birimler;
-        try { birimler = await api('yargiBirimleriSorgula_brd.ajx', { yargiTuru: tur.kod }); }
-        catch (e) { if (e instanceof Fatal) throw e; failed.add(tur.kod + '|*'); continue; }
-        if (!Array.isArray(birimler)) { failed.add(tur.kod + '|*'); continue; }
-        await sleep(DELAY);
+      if (j.listDone) {
+        merged = old;
+      } else {
+        const found = new Map();
+        const failed = new Set();
 
-        for (const b of birimler) {
-          for (const durumKod of [0, 1]) {
-            checkStop();
-            await setProgress({ running: true, phase: 'liste', text: `Dosyalar taranıyor: ${tur.ad} · ${b.kod} · ${durumKod ? 'kapalı' : 'açık'} (${found.size} dosya bulundu)` });
-            try {
-              for (let page = 1; page <= 200; page++) {
-                const res = await api('search_phrase_detayli.ajx', {
-                  dosyaDurumKod: durumKod, pageSize: 500, pageNumber: page,
-                  birimId: '', birimTuru2: b.tablo, birimTuru3: tur.kod
-                });
-                if (res == null) break;
-                if (!Array.isArray(res) || !Array.isArray(res[0])) throw new Error('Beklenmeyen sorgu yanıtı.');
-                for (const d of res[0]) {
-                  const r = toRecord(d, tur, b, durumKod);
-                  found.set(r.key, r);
+        // 1) Dosya listesi: her yargı türü × birim türü × açık/kapalı. Yarıda kalırsa baştan alınır (kısa sürer
+        //    ve dosyaId'ler oturuma bağlı olabildiği için taze olmalı).
+        for (const tur of TURLER) {
+          checkStop();
+          await setProgress({ running: true, phase: 'liste', text: `${tur.ad} birimleri alınıyor… (${found.size} dosya bulundu)` });
+          let birimler;
+          try { birimler = await api('yargiBirimleriSorgula_brd.ajx', { yargiTuru: tur.kod }); }
+          catch (e) { if (e instanceof Fatal) throw e; failed.add(tur.kod + '|*'); continue; }
+          if (!Array.isArray(birimler)) { failed.add(tur.kod + '|*'); continue; }
+          await pace();
+
+          for (const b of birimler) {
+            for (const durumKod of [0, 1]) {
+              checkStop();
+              await setProgress({ running: true, phase: 'liste', text: `Dosyalar taranıyor: ${tur.ad} · ${b.kod} · ${durumKod ? 'kapalı' : 'açık'} (${found.size} dosya bulundu)` });
+              try {
+                for (let page = 1; page <= 200; page++) {
+                  const res = await api('search_phrase_detayli.ajx', {
+                    dosyaDurumKod: durumKod, pageSize: 500, pageNumber: page,
+                    birimId: '', birimTuru2: b.tablo, birimTuru3: tur.kod
+                  });
+                  if (res == null) break;
+                  if (!Array.isArray(res) || !Array.isArray(res[0])) throw new Error('Beklenmeyen sorgu yanıtı.');
+                  for (const d of res[0]) {
+                    const r = toRecord(d, tur, b, durumKod);
+                    found.set(r.key, r);
+                  }
+                  const total = Number(res[1]) || 0;
+                  if (res[0].length < 500 || page * 500 >= total) break;
+                  await pace();
                 }
-                const total = Number(res[1]) || 0;
-                if (res[0].length < 500 || page * 500 >= total) break;
-                await sleep(DELAY);
+              } catch (e) {
+                if (e instanceof Fatal) throw e;
+                failed.add(`${tur.kod}|${b.tablo}|${durumKod}`);
               }
-            } catch (e) {
-              if (e instanceof Fatal) throw e;
-              failed.add(`${tur.kod}|${b.tablo}|${durumKod}`);
+              await pace();
             }
-            await sleep(DELAY);
           }
         }
-      }
-      checkStop();
+        checkStop();
 
-      // 2) Eskiyle birleştir. Sorgusu hata veren gruptaki eski kayıtlar silinmez.
-      merged = new Map();
-      let added = 0;
-      for (const [k, r] of found) {
-        const o = old.get(k);
-        if (!o) added++;
-        merged.set(k, {
-          ...r,
-          taraflar: o ? o.taraflar : null, tarafAt: o ? o.tarafAt : 0, tarafV: o ? o.tarafV : 0,
-          evrakSeen: o ? o.evrakSeen : undefined, evrakAt: o ? o.evrakAt : 0, yeniEvrak: o ? o.yeniEvrak : undefined,
-          sonEvrak: o ? o.sonEvrak : undefined
-        });
+        // 2) Eskiyle birleştir. Sorgusu hata veren gruptaki eski kayıtlar silinmez. Bu işte listelenen
+        //    kayıtlar listJob ile işaretlenir; sonraki adımlar kaldığı yerden bunlara göre sürer.
+        merged = new Map();
+        let added = 0;
+        for (const [k, r] of found) {
+          const o = old.get(k);
+          if (!o) added++;
+          merged.set(k, {
+            ...r,
+            listJob: j.id,
+            taraflar: o ? o.taraflar : null, tarafAt: o ? o.tarafAt : 0, tarafV: o ? o.tarafV : 0,
+            evrakSeen: o ? o.evrakSeen : undefined, evrakAt: o ? o.evrakAt : 0, yeniEvrak: o ? o.yeniEvrak : undefined,
+            sonEvrak: o ? o.sonEvrak : undefined
+          });
+        }
+        for (const [k, o] of old) {
+          if (merged.has(k)) continue;
+          if (failed.has(o.yargiTuru + '|*') || failed.has(`${o.yargiTuru}|${o.birimTuru2}|${o.sorguDurum}`)) merged.set(k, o);
+        }
+        // Oturum düşüp liste yeniden alındıysa ilk listelemedeki "yeni dosya" sayısı korunur.
+        if (!st.listed) st.added = added;
+        st.listed = true;
+        st.failed = failed.size;
+        j.listDone = true;
+        await saveIndex(merged);
+        await saveJob(j);
       }
-      for (const [k, o] of old) {
-        if (merged.has(k)) continue;
-        if (failed.has(o.yargiTuru + '|*') || failed.has(`${o.yargiTuru}|${o.birimTuru2}|${o.sorguDurum}`)) merged.set(k, o);
-      }
-      await saveIndex(merged);
 
-      // 3) Taraf adları: yeni dosyalar, vekil bilgisi olmayan eski kayıtlar (veya "Tümünü yenile"de hepsi).
-      const need = [...merged.values()].filter(r => full || !r.taraflar || r.tarafV !== TARAF_V);
+      // 3) Taraf adları: yeni dosyalar, vekil bilgisi olmayan eski kayıtlar (veya "Tümünü yenile"de bu işte
+      //    henüz yenilenmemiş hepsi).
+      const need = [...merged.values()].filter(r => j.full ? (r.tarafAt || 0) < startedAt : (!r.taraflar || r.tarafV !== TARAF_V));
       const phaseStart = Date.now();
-      let done = 0, errors = 0, streak = 0;
+      let done = 0, streak = 0;
       for (const r of need) {
         checkStop();
         try {
@@ -248,20 +342,19 @@
           streak = 0;
         } catch (e) {
           if (e instanceof Fatal) throw e;
-          errors++;
+          st.errors++;
           if (++streak >= 8) throw new Fatal('Taraf bilgileri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
         }
         done++;
-        if (done % 25 === 0) await saveIndex(merged);
+        if (done % 10 === 0) { await saveIndex(merged); await saveJob(j); }
         await setProgress({ running: true, phase: 'taraf', done, total: need.length, phaseStart, text: `Taraf bilgileri alınıyor: ${done}/${need.length}` });
-        await sleep(DELAY);
+        await pace();
       }
       await saveIndex(merged);
 
-      // 4) Evrak takibi: yalnız açık ve bu taramada bulunan dosyalar (dosyaId yalnız aynı oturumda geçerli).
-      let yeniEvrak = 0, yeniDosya = 0, evrakErrors = 0, evrakBad = 0;
+      // 4) Evrak takibi: yalnız açık ve bu işte listelenen dosyalar (dosyaId listelemeyle aynı oturumda geçerli).
       if (evrakTakip) {
-        const eneed = [...merged.values()].filter(r => r.sorguDurum !== 1 && found.has(r.key));
+        const eneed = [...merged.values()].filter(r => r.sorguDurum !== 1 && r.listJob === j.id && (r.evrakAt || 0) < startedAt);
         const ePhaseStart = Date.now();
         let eDone = 0;
         streak = 0;
@@ -273,44 +366,58 @@
             r.evrakSeen = seen;
             r.evrakAt = Date.now();
             r.sonEvrak = sonEvrak(items);
-            evrakBad += bad;
+            st.evrakBad += bad;
             if (yeni.length) {
               const at = Date.now();
               r.yeniEvrak = [...yeni.map(y => ({ ...y, at })), ...(r.yeniEvrak || [])].slice(0, YENI_MAX);
-              yeniEvrak += yeni.length;
-              yeniDosya++;
             }
             streak = 0;
           } catch (e) {
             if (e instanceof Fatal || e instanceof Stopped) throw e;
-            evrakErrors++;
+            st.evrakErrors++;
             if (++streak >= 8) throw new Fatal('Evrak listeleri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
           }
           eDone++;
-          if (eDone % 25 === 0) await saveIndex(merged);
+          if (eDone % 10 === 0) { await saveIndex(merged); await saveJob(j); }
           await setProgress({ running: true, phase: 'evrak', done: eDone, total: eneed.length, phaseStart: ePhaseStart, text: `Yeni evraklar kontrol ediliyor: ${eDone}/${eneed.length}` });
-          await sleep(DELAY);
+          await pace();
         }
         await saveIndex(merged);
       }
 
-      summary = `Güncelleme tamamlandı: ${merged.size.toLocaleString('tr-TR')} dosya, ${added} yeni`;
+      // Bu işte bulunan yeni evraklar (iş yarıda kalıp sürdürüldüyse önceki bölümlerdekiler de).
+      let yeniEvrak = 0, yeniDosya = 0;
+      for (const r of merged.values()) {
+        const n = (r.yeniEvrak || []).filter(y => (y.at || 0) >= startedAt).length;
+        if (n) { yeniEvrak += n; yeniDosya++; }
+      }
+      let summary = `Güncelleme tamamlandı: ${merged.size.toLocaleString('tr-TR')} dosya, ${st.added} yeni`;
       if (yeniEvrak) summary += `; ${yeniDosya} dosyada ${yeniEvrak} yeni evrak`;
-      if (errors) summary += `, ${errors} dosyanın tarafları alınamadı`;
-      if (evrakErrors) summary += `, ${evrakErrors} dosyanın evrakları alınamadı`;
-      if (evrakBad) summary += `, ${evrakBad} evrakta kimlik/tarih eksik olduğu için karşılaştırılamadı`;
-      if (failed.size) summary += `, ${failed.size} sorgu grubu hata verdi (eski kayıtlar korundu)`;
+      if (st.errors) summary += `, ${st.errors} dosyanın tarafları alınamadı`;
+      if (st.evrakErrors) summary += `, ${st.evrakErrors} dosyanın evrakları alınamadı`;
+      if (st.evrakBad) summary += `, ${st.evrakBad} evrakta kimlik/tarih eksik olduğu için karşılaştırılamadı`;
+      if (st.failed) summary += `, ${st.failed} sorgu grubu hata verdi (eski kayıtlar korundu)`;
       summary += '.';
-      await setProgress({ running: false, text: summary, endedAt: Date.now(), startedAt });
+      await chrome.storage.local.remove('uhdJob');
+      await setProgress({ running: false, final: true, text: summary, endedAt: Date.now(), startedAt });
       toast(summary, 'ok', 6000);
     } catch (e) {
+      // Başka sekme devraldıysa (ör. sayfa geri getirildi) hiçbir şeye dokunmadan çekil.
+      if (e instanceof Stopped && e.message === 'lost') return;
       if (merged) await saveIndex(merged).catch(() => {});
-      const stopped = e instanceof Stopped;
-      const text = stopped
-        ? (merged ? 'Güncelleme durduruldu; o ana kadar alınan bilgiler saklandı.' : 'Güncelleme durduruldu; indeks değiştirilmedi.')
-        : `Güncelleme durdu: ${e.message}`;
-      await setProgress({ running: false, text, error: !stopped, endedAt: Date.now(), startedAt });
-      toast(text, stopped ? '' : 'err', 8000);
+      if (e instanceof Stopped) {
+        await chrome.storage.local.remove('uhdJob');
+        const text = merged ? 'Güncelleme durduruldu; o ana kadar alınan bilgiler saklandı.' : 'Güncelleme durduruldu; indeks değiştirilmedi.';
+        await setProgress({ running: false, text, endedAt: Date.now(), startedAt });
+        toast(text, '', 8000);
+        return;
+      }
+      // Oturum düşmesi ve benzeri: iş saklanır; yeniden girişte (sayfa yüklenince) kaldığı yerden sürer.
+      const reason = String(e.message || e).replace(/\s*(Yeniden giriş yapıp|UYAP oturumunu kontrol edip) tekrar deneyin\.$/, '');
+      await saveJob({ ...j, paused: 'oturum' }).catch(() => {});
+      const text = `Güncelleme duraklatıldı: ${reason} UYAP’a yeniden girdiğinizde kaldığı yerden sürer.`;
+      await setProgress({ running: false, paused: true, error: true, text, endedAt: Date.now(), startedAt });
+      toast(text, 'err', 0);
     }
   }
 
@@ -645,7 +752,7 @@
         const res = await startUpdate(full);
         if (!res.ok) ui.setNotice(res.error, 'err');
       },
-      onStop: () => { if (job) job.stop = true; },
+      onStop: () => stopUpdate(),
       onClose: hidePanel
     });
     launch.addEventListener('click', () => {
@@ -717,11 +824,44 @@
     if (!msg || typeof msg.type !== 'string') return;
     if (msg.type === 'uhd-ping') send({ ok: true });
     else if (msg.type === 'uhd-open') { openFile(msg.record); send({ ok: true }); }
-    else if (msg.type === 'uhd-stop') { if (job) job.stop = true; send({ ok: true }); }
+    else if (msg.type === 'uhd-stop') { stopUpdate().then(() => send({ ok: true })); return true; }
     else if (msg.type === 'uhd-update') { startUpdate(msg.full).then(send); return true; }
   });
 
   mountPage();
+
+  // ---------------------------------------------------------------- Güncellemenin sekmeler arası sürmesi
+
+  chrome.storage.onChanged.addListener((ch, area) => {
+    if (area !== 'local') return;
+    if (ch.uhdJob && job) {
+      const j = ch.uhdJob.newValue;
+      if (j && j.id === job.id && j.stop) job.stop = true;
+    }
+    if (ch.uhdProgress) {
+      const p = ch.uhdProgress.newValue;
+      // Başka sekme işi devraldıysa bu sekmedeki kopya çekilir.
+      if (job && p && p.owner && p.owner !== OWNER) job.lost = true;
+      // Yürüten sekme kapandı: bu sekme devralmayı dener.
+      if (!job && p && p.handoff) setTimeout(() => maybeResume(false), Math.random() * 500);
+      // Güncelleme başka sekmede bittiyse görünür sekmede de bildir.
+      if (!job && p && p.final && p.owner !== OWNER && !document.hidden) toast(p.text, 'ok', 6000);
+    }
+  });
+
+  // Sekme kapanır, yenilenir ya da UYAP'tan çıkılırsa işi bırak; açık başka UYAP sekmesi hemen devralır.
+  window.addEventListener('pagehide', () => {
+    if (!job) return;
+    job.lost = true;
+    chrome.storage.local.set({ uhdProgress: {
+      owner: null, running: false, paused: true, handoff: true, beat: 0, endedAt: Date.now(),
+      text: 'Güncelleme yarıda kaldı; açık bir UYAP sekmesinde ya da UYAP’ı yeniden açtığınızda kaldığı yerden sürer.'
+    } });
+  });
+
+  // Yürüten sekme sinyal vermeden gittiyse (çöktü, Chrome sekmeyi uykuya aldı) bir süre sonra devral.
+  setInterval(() => maybeResume(false), 20000);
+  setTimeout(() => maybeResume(true), 1500);
 
   // Popup'tan gelen ve sayfa yenilemesi gerektiren açma isteği.
   chrome.storage.local.get('uhdPending').then(async ({ uhdPending: p }) => {

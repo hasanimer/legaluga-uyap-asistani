@@ -29,6 +29,7 @@ NASIL ÇALIŞIR
 
 ÖZELLİKLER
 • Türkçe karakter gerekmez: "sukru ozturk" yazın, ŞÜKRÜ ÖZTÜRK bulunsun
+• Kesintisiz güncelleme: güncelleme sürerken başka sekmelerde çalışabilirsiniz; sekme kapanır ya da oturum düşerse kaldığı yerden sürer
 • Yeni evrak takibi: her güncellemede açık dosyalarınıza gelen yeni evrakları (tür, onay tarihi, gönderen) listeler
 • Müvekkillerinizi otomatik tanır, ayrı gösterir; yalnız müvekkil adlarında arama
 • Karşı taraf vekiliyle arama

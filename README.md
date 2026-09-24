@@ -24,7 +24,18 @@ Klasörü silmeyin ya da taşımayın; Chrome eklentiyi oradan çalıştırır.
 
 1. [UYAP Avukat Portalı](https://avukat.uyap.gov.tr)'na e-imza ile giriş yapın.
 2. Eklenti simgesine tıklayın ya da UYAP sayfasının sağ kenarındaki **Dosya Ara** şeridine basın.
-3. **Güncelle**'ye basın. Eklenti tüm açık ve kapalı dosyalarınızı, ardından taraf ve vekil adlarını ve açık dosyaların evrak listesini UYAP'tan alır. Dosya sayısına göre birkaç dakika sürebilir; bu sırada UYAP sekmesini kapatmayın (popup'ı kapatabilirsiniz). **Durdur** ile yarıda kesebilirsiniz; o ana kadar alınan taraf bilgileri korunur ve sonraki **Güncelle** kaldığı yerden devam eder.
+3. **Güncelle**'ye basın. Eklenti tüm açık ve kapalı dosyalarınızı, ardından taraf ve vekil adlarını ve açık dosyaların evrak listesini UYAP'tan alır. Dosya sayısına göre birkaç dakika sürebilir. Bu sırada UYAP'ta gezinebilir, başka sekmelerde ya da programlarda çalışabilirsiniz; güncelleme arka planda sürer. **Durdur** ile yarıda kesebilirsiniz; o ana kadar alınan bilgiler korunur.
+
+**Güncelleme yarıda kalırsa** kendiliğinden kaldığı yerden sürer:
+
+| Durum | Ne olur |
+| --- | --- |
+| UYAP sekmesini yenilediniz | Sayfa açılınca birkaç saniye içinde sürer. |
+| Güncellemenin yürüdüğü sekmeyi kapattınız | Açık başka bir UYAP sekmesi hemen devralır; hiç yoksa UYAP'ı bir sonraki açışınızda sürer. |
+| UYAP oturumu düştü | Güncelleme duraklar; UYAP'a yeniden girdiğinizde sürer. |
+| Chrome sekmeyi uykuya aldı ya da kapandı | En geç 2 dakika içinde açık başka bir UYAP sekmesi, ya da UYAP'ı bir sonraki açışınızda sürer. |
+
+Yarıda kalmış bir güncelleme varken **Güncelle** düğmesi **Sürdür** olur; **İptal et** onu bırakır. Liste alma adımında kalındıysa dosya listesi yeniden alınır (kısa sürer), taraf ve evrak adımları kaldığı yerden sürer.
 
 Sonraki güncellemelerde yalnız yeni ve eksik dosyaların taraf bilgileri alınır, bu yüzden çok daha kısa sürer. Liste 7 günden eskiyse eklenti hatırlatır. **Tümünü yenile** her şeyi baştan alır.
 
@@ -83,6 +94,7 @@ Dosya listesi, taraf adları, açık dosyaların evrak listesi, notlar ve ayarla
 
 | Durum | Çözüm |
 | --- | --- |
+| Güncelleme "yarıda kaldı" diyor | UYAP açıksa kendiliğinden sürer; beklemek istemezseniz **Sürdür**'e basın. |
 | "UYAP sekmesi eklentiye yanıt vermedi" | UYAP sekmesini yenileyin (F5) ve tekrar deneyin. Eklentiyi yeni kurduysanız açık UYAP sekmeleri yenilenmeden çalışmaz. |
 | Güncelleme oturum hatasıyla durdu | UYAP oturumunuz düşmüş olabilir; yeniden giriş yapıp **Güncelle**'ye basın, kaldığı yerden devam eder. |
 | Yeni evrak görünmüyor | İlk güncelleme başlangıç sayılır; yeni evraklar ikinci güncellemeden itibaren çıkar. Ayarlar'da evrak kontrolünün açık olduğunu ve dosyanın açık olduğunu kontrol edin. |
@@ -96,7 +108,8 @@ Dosya listesi, taraf adları, açık dosyaların evrak listesi, notlar ve ayarla
 | `extension/` | Eklentinin kendisi; Chrome'a bu klasör yüklenir |
 | `extension/common.js` | Türkçe normalleştirme, yerel arama, müvekkil tespiti, UYAP açılış adresi; marka adı ve renkleri (`BRAND`) |
 | `extension/ui.js` | Arama arayüzü; popup ve UYAP sayfasındaki yan panel aynı kodu kullanır |
-| `extension/content.js` | UYAP sekmesinde çalışır: güncelleme (dosya listesi, taraflar, evrak kontrolü), düğme bularak dosya açma, açılış duyurusunu gizleme |
+| `extension/content.js` | UYAP sekmesinde çalışır: güncelleme (dosya listesi, taraflar, evrak kontrolü; kaldığı yerden sürdürülebilir), düğme bularak dosya açma, açılış duyurusunu gizleme |
+| `extension/background.js` | Güncellemeyi yürüten sekme kapanınca işi hemen serbest bırakır (ağ isteği yapmaz, veri okumaz) |
 | `tests/arama.test.mjs`, `tests/evrak.test.mjs` | Arama ve evrak takibi çekirdeğinin birim testleri |
 | `tests/sahte-uyap/` | DevExtreme 25 ile kurulmuş sahte Dosya Sorgulama ekranı ve windows-1254 yanıt veren sahte sunucu |
 | `store/` | Mağaza form metinleri ve görselleri (görseller `store/gorsel/*.html` sayfalarından üretilir; veriler uydurmadır) |
@@ -106,6 +119,7 @@ Dosya listesi, taraf adları, açık dosyaların evrak listesi, notlar ve ayarla
 
 - **Güncelleme** (yalnız kullanıcı "Güncelle"ye bastığında): UYAP Detaylı Sorgulama ekranının kendi kullandığı istekler. Her yargı türü ve birim türü için açık/kapalı dosyalar `search_phrase_detayli.ajx` ile listelenir, taraf ve vekil adları `dosya_taraf_bilgileri_brd.ajx` ile alınır. Yanıtlar UTF-8 değilse windows-1254 olarak çözülür.
 - **Evrak takibi** (Güncelle'nin son adımı, Ayarlar'dan kapatılabilir): bu taramada bulunan her açık dosya için `list_dosya_evraklar.ajx {dosyaId, pageNumber}` çağrılır (UYAP'ın Evrak Getir ekranının isteği; `pageTotal` > 1 ise en çok 20 sayfa). Yanıttaki `tumEvraklar` dosyayı ve bağlı dosyaları (talimat, soruşturma…) `"2025/9101(Ceza Dava Dosyası)"` başlıklarıyla gruplar, `son20Evrak` ana dosyanın son 20 evrakıdır. **`evrakId` ve `dosyaId` her yanıtta yeniden şifrelenir** (aynı evrak her istekte farklı kimlikle gelir), bu yüzden evrak `birimEvrakNo|onaylandigiTarih|tur` anahtarıyla tanınır; bu alanlardan biri eksikse evrak tahminle eşleştirilmez, özette sayılır. Görülen anahtarlar kayıtta `evrakSeen`, yeniler `yeniEvrak` olarak tutulur; "Görüldü" zamanları ayrı `uhdEvrakGoruldu` anahtarındadır (güncelleme sürerken indeksle yarışmasın diye).
+- **Kesintisiz güncelleme**: Güncelleme bir iş kaydıdır (`uhdJob`: aşama, istatistikler). Yürüten sekme `uhdProgress.owner/beat` ile sinyal verir; indeks her 10 dosyada bir kaydedilir. Sekme yenilenirse `sessionStorage`'daki sekme kimliğinden işin kendisinde olduğunu anlayıp hemen sürdürür; sekme kapanırsa `background.js` (`tabs.onRemoved`) işi serbest bırakır ve açık başka UYAP sekmesi devralır; sinyal 90 sn gelmezse her UYAP sekmesi 20 sn'de bir devralmayı dener (aynı anda birden çok sekme denerse son yazan kazanır, diğerleri çekilir). Oturum düşmesi işi `paused: 'oturum'` ile duraklatır; bir sonraki sayfa yüklemesinde (yeniden girişten sonra) liste tazelenip sürer. Sekme arka plandayken Chrome zamanlayıcıları yavaşlattığı için istekler arası 150 ms bekleme yalnız sekme görünürken yapılır; istekler her durumda sırayla, birer birer gider.
 - **Arama**: tamamen yerel; yazarken UYAP'a istek gitmez.
 - **Dosya açma**: `/dosya-sorgulama?mode=detayli&yargiTur=…&yargiBirimi=…&dosyaDurum=…` adresi formu hazır doldurur (form yeniden kurulsun diye önce boş bir yola geçilir). Eklenti alanları doğrular, **Sorgula**'ya basar, sonuç tablosunda satırı bulur ve `aria-label="Pencere Görünümü"` düğmesine tıklar. Adımlar konsola `[Legaluga]` önekiyle yazılır; açılamazsa bildirim tablo teşhisini (satır/düğme sayısı) gösterir.
 - **Açılış duyurusu**: UYAP girişte `sessionStorage.showPopupDuyuru2 = "true"` yapar; eklenti bunu "Tekrar Gösterme" düğmesinin yaptığı gibi `"false"` yapar. Ayarlardan kapatılabilir. KVKK rıza penceresine dokunulmaz.

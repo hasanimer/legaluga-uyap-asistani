@@ -192,6 +192,7 @@
     let editing = null;
     let manualNotice = false;
     let goruldu = {};
+    let pendingJob = null;     // yarıda kalmış güncelleme işi (uhdJob)
     let yeniMap = new Map();   // kayıt key → en yeni görülmemiş evrakın onay zamanı
     let yeniCount = 0;         // görülmemiş yeni evrak sayısı
     let evrakTracked = false;  // en az bir dosyanın evrakları tarandı mı
@@ -559,7 +560,12 @@
     function renderStatus() {
       const run = running();
       btnUpdate.disabled = btnFull.disabled = btnClear.disabled = run;
-      btnStop.hidden = !run;
+      const paused = !run && !!pendingJob && !pendingJob.stop;
+      btnStop.hidden = !run && !paused;
+      btnStop.textContent = paused ? 'İptal et' : 'Durdur';
+      btnStop.title = paused ? 'Yarıda kalan güncellemeyi iptal eder; o ana kadar alınan bilgiler saklı kalır.' : '';
+      btnUpdate.textContent = paused ? 'Sürdür' : 'Güncelle';
+      btnUpdate.title = paused ? 'Yarıda kalan güncellemeyi kaldığı yerden sürdürür.' : 'Dosya listesini UYAP’tan yeniler; yalnızca yeni ve eksik dosyaların taraf bilgilerini alır.';
       count.textContent = records.length ? `${fmtNum(records.length)} dosya` : '';
       status.classList.toggle('err', !run && !!(progress && progress.error));
       if (run) {
@@ -608,7 +614,12 @@
         setNotice(''); opts.onUpdate(true);
       }
     });
-    btnStop.addEventListener('click', () => opts.onStop());
+    btnStop.addEventListener('click', async () => {
+      if (running()) return opts.onStop();
+      // Yürüten sekme yok: duraklamış işi doğrudan iptal et (popup'ta açık UYAP sekmesi olmayabilir).
+      await chrome.storage.local.remove('uhdJob');
+      await chrome.storage.local.set({ uhdProgress: { running: false, text: 'Yarıda kalan güncelleme iptal edildi.', endedAt: Date.now() } });
+    });
     btnSettings.addEventListener('click', () => {
       if (settings.hidden) openSettings();
       else { settings.hidden = true; btnSettings.textContent = 'Ayarlar'; }
@@ -636,12 +647,13 @@
     });
     btnClear.addEventListener('click', async () => {
       if (!confirm('Dosya indeksi, notlarınız, son açılanlar ve ayarlarınız bu bilgisayardan silinsin mi? Bu işlem geri alınamaz; UYAP’taki dosyalarınız etkilenmez.')) return;
-      await chrome.storage.local.remove(['uhdIndex', 'uhdProgress', 'uhdRecent', 'uhdNotes', 'uhdPrefs', 'uhdPending', 'uhdEvrakGoruldu']);
+      await chrome.storage.local.remove(['uhdIndex', 'uhdProgress', 'uhdRecent', 'uhdNotes', 'uhdPrefs', 'uhdPending', 'uhdEvrakGoruldu', 'uhdJob']);
       setNotice('Tüm yerel veriler silindi.');
     });
 
-    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu']).then(v => {
+    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu', 'uhdJob']).then(v => {
       goruldu = v.uhdEvrakGoruldu || {};
+      pendingJob = v.uhdJob || null;
       setIndex(v.uhdIndex);
       progress = v.uhdProgress || null;
       notes = v.uhdNotes || {};
@@ -659,6 +671,7 @@
       if (area !== 'local') return;
       let redraw = false;
       if (ch.uhdEvrakGoruldu) goruldu = ch.uhdEvrakGoruldu.newValue || {};
+      if (ch.uhdJob) pendingJob = ch.uhdJob.newValue || null;
       if (ch.uhdIndex) setIndex(ch.uhdIndex.newValue);
       else if (ch.uhdEvrakGoruldu) computeYeni();
       if (ch.uhdIndex || ch.uhdEvrakGoruldu) { renderFilters(); redraw = true; }
