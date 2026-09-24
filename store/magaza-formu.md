@@ -23,12 +23,13 @@ UYAP Avukat Portalı'nda bir dosyayı bulmak için yargı türü, yargı birimi 
 
 NASIL ÇALIŞIR
 1. UYAP Avukat Portalı'na her zamanki gibi e-imzanızla giriş yapın.
-2. "Güncelle"ye basın. Vekili olduğunuz dosyalar ve taraf bilgileri yalnız bilgisayarınıza kaydedilir.
+2. "Güncelle"ye basın. Vekili olduğunuz dosyalar, taraf bilgileri ve açık dosyaların evrak listesi yalnız bilgisayarınıza kaydedilir.
 3. Ad, soyad, dosya no, mahkeme veya not yazın; sonuçlar yazdıkça gelir.
 4. "Dosya Görüntüle"ye basın; asistan UYAP'ın Dosya Sorgulama ekranını doldurur ve dosyayı Pencere Görünümü ile açar.
 
 ÖZELLİKLER
 • Türkçe karakter gerekmez: "sukru ozturk" yazın, ŞÜKRÜ ÖZTÜRK bulunsun
+• Yeni evrak takibi: her güncellemede açık dosyalarınıza gelen yeni evrakları (tür, onay tarihi, gönderen) listeler
 • Müvekkillerinizi otomatik tanır, ayrı gösterir; yalnız müvekkil adlarında arama
 • Karşı taraf vekiliyle arama
 • Açık/Kapalı ve Ceza/Hukuk/İcra/İdari filtreleri
@@ -42,7 +43,7 @@ NASIL ÇALIŞIR
 GİZLİLİK
 • Sunucu yok, hesap yok. Verileriniz hiçbir sunucuya gönderilmez.
 • Yazarken UYAP'a istek gitmez; UYAP'tan veri yalnız "Güncelle"ye bastığınızda alınır.
-• UYAP şifrenize, e-imzanıza veya evrak içeriklerine erişilmez.
+• UYAP şifrenize, e-imzanıza, evrakların kendisine veya içeriklerine erişilmez; yalnız evrak listesi bilgisi alınır.
 • Ayarlar → "Tüm verileri sil" ile her şey tek tıkla silinir.
 
 YETKİLER VE GEREKÇELERİ
@@ -75,15 +76,15 @@ Avukatın UYAP Avukat Portalı'ndaki kendi dosyalarını ad, soyad, dosya numara
 
 | Yetki | Gerekçe |
 |---|---|
-| `storage` | Kullanıcının dosya listesi, notları ve ayarları yalnızca cihazda (chrome.storage.local) saklanır; arama bu yerel indeks üzerinde yapılır. |
+| `storage` | Kullanıcının dosya listesi, açık dosyaların evrak listesi, notları ve ayarları yalnızca cihazda (chrome.storage.local) saklanır; arama bu yerel indeks üzerinde yapılır. |
 | `unlimitedStorage` | Çok sayıda dosyası olan avukatlarda taraf bilgileriyle birlikte indeks varsayılan 10 MB sınırını aşabilir; bu yetki olmadan güncelleme yarıda kalır. |
-| Ana makine: `https://avukat.uyap.gov.tr/*` | Eklenti yalnızca UYAP Avukat Portalı'nda çalışır: kullanıcının açık oturumunda dosya listesini alır ve seçilen dosyayı açmak için portalın Dosya Sorgulama ekranını doldurur. Başka hiçbir siteye erişmez. |
+| Ana makine: `https://avukat.uyap.gov.tr/*` | Eklenti yalnızca UYAP Avukat Portalı'nda çalışır: kullanıcının açık oturumunda dosya listesini ve açık dosyaların evrak listesini alır ve seçilen dosyayı açmak için portalın Dosya Sorgulama ekranını doldurur. Başka hiçbir siteye erişmez. |
 
 **Uzak kod (Remote code):** Hayır, uzak kod kullanmıyorum. Tüm JavaScript paketin içindedir; harici betik, `eval` veya uzaktan yüklenen kod yoktur.
 
 **Veri kullanımı — işaretlenecek veri türleri:**
 - ☑ **Kişisel tanımlayıcı bilgiler** (Personally identifiable information): Dosya taraflarının ve vekillerinin adları. Yalnızca cihazda saklanır, iletilmez.
-- ☑ **Web sitesi içeriği** (Website content): UYAP'tan alınan dosya numarası, mahkeme adı, dosya türü ve durum bilgileri. Yalnızca cihazda saklanır, iletilmez.
+- ☑ **Web sitesi içeriği** (Website content): UYAP'tan alınan dosya numarası, mahkeme adı, dosya türü ve durum bilgileri; açık dosyaların evrak listesi (evrak türü, onay ve gönderim tarihi, gönderen, açıklama, birim evrak no). Evrakların kendisi alınmaz. Yalnızca cihazda saklanır, iletilmez.
 - Diğerleri (sağlık, finans, kimlik doğrulama, kişisel iletişim, konum, web geçmişi, kullanıcı etkinliği) işaretlenmez.
 
 > Not: Veriler cihazdan çıkmasa da eklenti bu verileri işlediği için beyan ediyoruz. Eksik beyan, fazla beyandan daha büyük bir ret sebebidir.
@@ -93,7 +94,7 @@ Avukatın UYAP Avukat Portalı'ndaki kendi dosyalarını ad, soyad, dosya numara
 - ☑ Kullanıcı verilerini eklentinin tek amacıyla ilgisi olmayan amaçlarla kullanmıyorum veya aktarmıyorum.
 - ☑ Kullanıcı verilerini kredibilite belirlemek veya borç verme amacıyla kullanmıyorum veya aktarmıyorum.
 
-**Gizlilik politikası URL'si:** https://legaluga.com/gizlilik/uyap-asistani (Legaluga deposunda `claude/uyap-asistani-gizlilik` dalında; site yayına alınınca açılır)
+**Gizlilik politikası URL'si:** https://legaluga.com/gizlilik/uyap-asistani (kaynağı Legaluga deposunda `apps/web/app/gizlilik/uyap-asistani/page.tsx`)
 
 ## 4. Dağıtım
 

@@ -1,7 +1,8 @@
 // Arama arayüzü: hem eklenti popup'ında hem UYAP sayfasındaki yan panelde aynı kod kullanılır.
 (() => {
   if (globalThis.UHD.mountUI) return;
-  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo } = globalThis.UHD;
+  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs } = globalThis.UHD;
+  const EVRAK_SHOW = 3;
   const LIMIT = 60;
   const RECENT_MAX = 10;
   const RUN_STALE_MS = 90000;
@@ -26,6 +27,15 @@
 .uhd .chip:hover{border-color:var(--focus)}
 .uhd .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .uhd .chip.client.on{background:var(--deep);border-color:var(--deep)}
+.uhd .chip.new{border-color:#b2ccff;color:#1849a9}
+.uhd .chip.new.on{background:#1849a9;border-color:#1849a9;color:#fff}
+.uhd .badge.new{background:#e0eaff;color:#1849a9}
+.uhd .evrak{margin-top:5px;padding:5px 8px;border-left:3px solid #528bff;background:#f0f5ff;border-radius:0 6px 6px 0;font-size:12px;cursor:default}
+.uhd .evrak .head{display:flex;justify-content:space-between;gap:8px;font-weight:600;color:#1849a9}
+.uhd .evrak ul{margin:3px 0 0;padding:0;list-style:none}
+.uhd .evrak li{margin:2px 0;color:#344054}
+.uhd .evrak li small{color:var(--muted)}
+.uhd .evrak .notebtn{color:#1849a9}
 .uhd .sep{width:1px;height:16px;background:#d0d5dd;margin:0 2px}
 .uhd .notice{margin:8px 10px 0;padding:8px 10px;border-radius:8px;background:#fff4e5;color:#7a4b00;font-size:12px;display:flex;gap:8px;align-items:center}
 .uhd .notice.err{background:#fdecea;color:#8a1f17}
@@ -145,12 +155,14 @@
     const status = el('div', { class: 'status' }, statusText, bar);
     const nameInput = el('input', { type: 'text', autocomplete: 'off', spellcheck: 'false' });
     const duyuruBox = el('input', { type: 'checkbox' });
+    const evrakBox = el('input', { type: 'checkbox' });
     const btnExport = el('button', { title: 'Tüm dosyaları taraflar ve notlarla birlikte Excel’de açılabilen CSV dosyası olarak indirir.' }, 'Excel’e aktar (CSV)');
     const btnClear = el('button', { class: 'danger', title: 'Dosya indeksini, notları, son açılanları ve ayarları bu bilgisayardan siler.' }, 'Tüm verileri sil');
     const settings = el('div', { class: 'settings', hidden: true },
       el('label', null, 'Vekil adınız ', el('small', null, '(müvekkil tespiti için; birden çok ad virgülle ayrılabilir)')),
       nameInput,
       el('label', { class: 'check' }, duyuruBox, 'UYAP girişindeki duyuru penceresini gösterme'),
+      el('label', { class: 'check', title: 'Her açık dosya için UYAP’a bir istek daha yapılır; güncelleme bir miktar uzar.' }, evrakBox, 'Güncellemede açık dosyalardaki yeni evrakları bul'),
       el('div', { class: 'row' }, btnExport, btnClear),
       el('div', { class: 'hint' }, 'Tüm veriler yalnız bu bilgisayarda saklanır ve hiçbir sunucuya gönderilmez.'),
       el('div', { class: 'hint' }, BRAND.disclaimer, ' ', el('a', { href: BRAND.site + '/gizlilik/uyap-asistani', target: '_blank', rel: 'noopener' }, 'Gizlilik politikası')));
@@ -177,7 +189,11 @@
     let sel = 0;
     let editing = null;
     let manualNotice = false;
-    const filter = { durum: 'all', tur: 'all', onlyClient: false };
+    let goruldu = {};
+    let yeniMap = new Map();   // kayıt key → en yeni görülmemiş evrakın onay zamanı
+    let yeniCount = 0;         // görülmemiş yeni evrak sayısı
+    let evrakTracked = false;  // en az bir dosyanın evrakları tarandı mı
+    const filter = { durum: 'all', tur: 'all', onlyClient: false, onlyNew: false };
 
     const myName = () => (prefs.myName || '').trim() || detected;
     const running = () => !!(progress && progress.running && Date.now() - (progress.beat || 0) < RUN_STALE_MS);
@@ -187,6 +203,21 @@
       meta = ix || {};
       detected = detectMyName(records);
       nameInput.placeholder = detected ? `Otomatik: ${detected}` : 'Örn. Ad Soyad';
+      computeYeni();
+    }
+
+    function computeYeni() {
+      yeniMap = new Map();
+      yeniCount = 0;
+      evrakTracked = false;
+      for (const r of records) {
+        if (r.evrakSeen) evrakTracked = true;
+        const u = unseenEvrak(r, goruldu);
+        if (!u.length) continue;
+        yeniCount += u.length;
+        yeniMap.set(r.key, Math.max(...u.map(y => trDateTs(y.onay))) || 1);
+      }
+      if (!yeniMap.size) filter.onlyNew = false;
     }
 
     // ------------------------------------------------ bildirim
@@ -214,6 +245,11 @@
       if (oldParties) return showNotice(`Müvekkil ve vekil bilgisi için bir kez Güncelle’ye basın (${fmtNum(oldParties)} dosyanın tarafları yenilenecek).`, '', update);
       const days = meta.updatedAt ? Math.floor((Date.now() - meta.updatedAt) / 86400000) : 0;
       if (days >= REMIND_DAYS) return showNotice(`Son güncelleme ${days} gün önce yapıldı. Yeni dosyalar için güncellemeniz önerilir.`, '', update);
+      if (yeniMap.size && !filter.onlyNew) {
+        return showNotice(`${fmtNum(yeniMap.size)} dosyada ${fmtNum(yeniCount)} yeni evrak var.`, '', {
+          label: 'Göster', fn: () => { filter.onlyNew = true; sel = 0; renderFilters(); render(); autoNotice(); }
+        });
+      }
       showNotice('');
     }
 
@@ -228,23 +264,27 @@
       { group: 'tur', v: '2', label: 'İcra' },
       { group: 'tur', v: 'other', label: 'Diğer', title: 'İdari Yargı, Satış Memurluğu, Arabuluculuk, Tazminat Komisyonu' },
       null,
-      { group: 'onlyClient', v: true, label: 'Müvekkil', title: 'Yalnızca müvekkil adlarında ara', cls: 'client' }
+      { group: 'onlyClient', v: true, label: 'Müvekkil', title: 'Yalnızca müvekkil adlarında ara', cls: 'client' },
+      { group: 'onlyNew', v: true, label: 'Yeni evrak', title: 'Güncellemelerde yeni evrak gelen ve henüz “Görüldü” demediğiniz dosyalar', cls: 'new' }
     ];
     function renderFilters() {
       filters.replaceChildren();
       for (const c of CHIPS) {
         if (!c) { filters.append(el('span', { class: 'sep' })); continue; }
+        if (c.group === 'onlyNew' && !evrakTracked) continue;
         const on = filter[c.group] === c.v;
-        const b = el('button', { class: 'chip' + (c.cls ? ' ' + c.cls : '') + (on ? ' on' : ''), title: c.title || null, 'aria-pressed': String(on) }, c.label);
+        const label = c.group === 'onlyNew' && yeniMap.size ? `${c.label} (${fmtNum(yeniMap.size)})` : c.label;
+        const b = el('button', { class: 'chip' + (c.cls ? ' ' + c.cls : '') + (on ? ' on' : ''), title: c.title || null, 'aria-pressed': String(on) }, label);
         b.addEventListener('click', () => {
           if (c.group === 'onlyClient' && !on && !myKeys(myName()).length) {
             setNotice('Müvekkil tespiti için vekil adınız bulunamadı. Ayarlar’dan adınızı girin.', '', { label: 'Ayarlar', fn: () => { setNotice(''); openSettings(); } });
             return;
           }
-          filter[c.group] = on ? (c.group === 'onlyClient' ? false : 'all') : c.v;
+          filter[c.group] = on ? (c.group === 'onlyClient' || c.group === 'onlyNew' ? false : 'all') : c.v;
           sel = 0;
           renderFilters();
           render();
+          if (c.group === 'onlyNew') autoNotice();
         });
         filters.append(b);
       }
@@ -311,6 +351,43 @@
       return notes[r.key] ? el('div', { class: 'note' }, highlight(notes[r.key], toks)) : null;
     }
 
+    // Evrak "2024/555(Talimat Dosyası)" gibi bağlı bir dosyadansa hangi dosya olduğu gösterilir.
+    function evrakDosya(r, g) {
+      if (!g || g.startsWith(r.dosyaNo + '(')) return '';
+      const m = /^(.+?)\((.+)\)$/.exec(g);
+      return m ? `${m[2]} ${m[1]}` : g;
+    }
+
+    function evrakBlock(r, toks) {
+      const u = unseenEvrak(r, goruldu);
+      if (!u.length) return null;
+      const seenBtn = el('button', { class: 'notebtn', title: 'Bu dosyadaki yeni evrakları görüldü olarak işaretle' }, 'Görüldü');
+      seenBtn.addEventListener('click', e => { e.stopPropagation(); markSeen([r.key]); });
+      const lines = u.slice(0, EVRAK_SHOW).map(y => {
+        // UYAP listeyi onay tarihine göre sıralar; sisteme gönderim tarihi farklıysa o da yazılır.
+        const tarih = y.gonderim && y.gonderim !== y.onay ? `Onay ${y.onay} (sisteme gönderim ${y.gonderim})` : `Onay ${y.onay}`;
+        const alt = [y.gonderen, evrakDosya(r, y.dosya), y.aciklama].filter(Boolean).join(' · ');
+        return el('li', { title: [y.tur, tarih, y.gonderen, evrakDosya(r, y.dosya), y.aciklama].filter(Boolean).join('\n') },
+          el('b', null, y.tur || 'Evrak'), ' · ', tarih, alt ? el('div', null, el('small', null, highlight(alt, toks))) : null);
+      });
+      if (u.length > EVRAK_SHOW) lines.push(el('li', null, el('small', null, `+${u.length - EVRAK_SHOW} evrak daha`)));
+      return el('div', { class: 'evrak', onclick: e => e.stopPropagation() },
+        el('div', { class: 'head' }, el('span', null, `${u.length} yeni evrak`), seenBtn),
+        el('ul', null, lines));
+    }
+
+    async function markSeen(keys) {
+      const next = { ...goruldu };
+      const now = Date.now();
+      for (const k of keys) next[k] = now;
+      goruldu = next;
+      computeYeni();
+      renderFilters();
+      render();
+      autoNotice();
+      await chrome.storage.local.set({ uhdEvrakGoruldu: next });
+    }
+
     function item(r, i, toks, keys) {
       const closed = r.sorguDurum === 1;
       const open = el('button', { class: 'open', title: 'Dosyayı UYAP’ta Pencere Görünümü ile aç' }, 'Dosya Görüntüle');
@@ -336,8 +413,10 @@
           el('div', { class: 'title' }, el('b', null, highlight(r.dosyaNo, toks)), el('span', null, highlight(r.birimAdi, toks))),
           el('div', { class: 'meta' },
             el('span', { class: 'badge' + (closed ? ' closed' : '') }, r.durum || (closed ? 'Kapalı' : 'Açık')),
+            yeniMap.has(r.key) ? el('span', { class: 'badge new' }, 'Yeni evrak') : null,
             [r.dosyaTur, r.acilis].filter(Boolean).join(' · ')),
           partyEls,
+          evrakBlock(r, toks),
           noteBlock(r, toks)),
         el('div', { class: 'acts' }, open, el('div', { class: 'minis' }, copyBtn, noteBtn)));
       row.addEventListener('click', () => openRecord(r));
@@ -366,7 +445,7 @@
           el('b', null, 'Başlamak için'),
           el('ol', null,
             el('li', null, 'UYAP Avukat Portalı’na e-imza ile giriş yapın.'),
-            el('li', null, '“Şimdi güncelle”ye basın. Vekili olduğunuz dosyaların listesi, taraf adları ve vekilleri UYAP’tan alınıp yalnızca bu bilgisayara kaydedilir; hiçbir yere gönderilmez. İlk seferde birkaç dakika sürebilir.'),
+            el('li', null, '“Şimdi güncelle”ye basın. Vekili olduğunuz dosyaların listesi, taraf adları, vekilleri ve açık dosyaların evrak listesi UYAP’tan alınıp yalnızca bu bilgisayara kaydedilir; hiçbir yere gönderilmez. İlk seferde birkaç dakika sürebilir.'),
             el('li', null, 'Ad, soyad, dosya no veya mahkeme yazın; “Dosya Görüntüle” ile dosya UYAP’ta açılır.')),
           go,
           el('p', { style: 'margin:12px 0 0;font-size:12px;color:var(--muted)' }, 'Ayrıntılar: ', el('a', { href: BRAND.site + '/gizlilik/uyap-asistani', target: '_blank', rel: 'noopener' }, 'gizlilik politikası'), '.')));
@@ -374,9 +453,9 @@
       }
       const keys = myKeys(myName());
       const q = input.value;
-      const res = search(records, q, { myName: myName(), notes, filter, limit: LIMIT });
+      const res = search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, limit: LIMIT });
       const hint = el('kbd', null, '↑↓ seç · Enter aç');
-      if (!res.tokens.length && !res.total && filter.durum === 'all' && filter.tur === 'all' && !filter.onlyClient) {
+      if (!res.tokens.length && !res.total && filter.durum === 'all' && filter.tur === 'all' && !filter.onlyClient && !filter.onlyNew) {
         const byKey = new Map(records.map(r => [r.key, r]));
         current = recent.map(k => byKey.get(k)).filter(Boolean);
         if (!current.length) {
@@ -387,15 +466,21 @@
       } else {
         current = res.items;
         if (!res.total) {
-          const narrowed = filter.durum !== 'all' || filter.tur !== 'all' || filter.onlyClient;
+          const narrowed = filter.durum !== 'all' || filter.tur !== 'all' || filter.onlyClient || filter.onlyNew;
           const box = el('div', { class: 'empty' }, 'Eşleşen dosya yok.');
           if (narrowed) {
-            box.append(el('br'), el('button', { class: 'notebtn', onclick: () => { filter.durum = 'all'; filter.tur = 'all'; filter.onlyClient = false; renderFilters(); render(); } }, 'Filtreleri kaldırıp tekrar ara'));
+            box.append(el('br'), el('button', { class: 'notebtn', onclick: () => { filter.durum = 'all'; filter.tur = 'all'; filter.onlyClient = false; filter.onlyNew = false; renderFilters(); render(); } }, 'Filtreleri kaldırıp tekrar ara'));
           }
           list.append(box);
           return;
         }
-        list.append(el('div', { class: 'section' }, el('span', null, `${fmtNum(res.total)} sonuç`), hint));
+        const total = el('span', null, `${fmtNum(res.total)} sonuç`);
+        if (filter.onlyNew) {
+          const all = el('button', { class: 'notebtn', title: 'Listelenen dosyaların yeni evraklarını görüldü olarak işaretle' }, 'Tümünü görüldü say');
+          all.addEventListener('click', () => markSeen(search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, limit: Infinity }).items.map(r => r.key)));
+          total.append(' · ', all);
+        }
+        list.append(el('div', { class: 'section' }, total, hint));
       }
       if (sel >= current.length) sel = 0;
       current.forEach((r, i) => list.append(item(r, i, res.tokens, keys)));
@@ -518,6 +603,10 @@
         render();
       }, 400);
     });
+    evrakBox.addEventListener('change', () => {
+      prefs = { ...prefs, evrakKapali: !evrakBox.checked };
+      chrome.storage.local.set({ uhdPrefs: prefs });
+    });
     duyuruBox.addEventListener('change', () => {
       prefs = { ...prefs, showDuyuru: !duyuruBox.checked };
       chrome.storage.local.set({ uhdPrefs: prefs });
@@ -528,11 +617,12 @@
     });
     btnClear.addEventListener('click', async () => {
       if (!confirm('Dosya indeksi, notlarınız, son açılanlar ve ayarlarınız bu bilgisayardan silinsin mi? Bu işlem geri alınamaz; UYAP’taki dosyalarınız etkilenmez.')) return;
-      await chrome.storage.local.remove(['uhdIndex', 'uhdProgress', 'uhdRecent', 'uhdNotes', 'uhdPrefs', 'uhdPending']);
+      await chrome.storage.local.remove(['uhdIndex', 'uhdProgress', 'uhdRecent', 'uhdNotes', 'uhdPrefs', 'uhdPending', 'uhdEvrakGoruldu']);
       setNotice('Tüm yerel veriler silindi.');
     });
 
-    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs']).then(v => {
+    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu']).then(v => {
+      goruldu = v.uhdEvrakGoruldu || {};
       setIndex(v.uhdIndex);
       progress = v.uhdProgress || null;
       notes = v.uhdNotes || {};
@@ -540,6 +630,7 @@
       prefs = v.uhdPrefs || {};
       nameInput.value = prefs.myName || '';
       duyuruBox.checked = !prefs.showDuyuru;
+      evrakBox.checked = !prefs.evrakKapali;
       renderFilters();
       render();
       renderStatus();
@@ -548,13 +639,17 @@
     chrome.storage.onChanged.addListener((ch, area) => {
       if (area !== 'local') return;
       let redraw = false;
-      if (ch.uhdIndex) { setIndex(ch.uhdIndex.newValue); redraw = true; }
+      if (ch.uhdEvrakGoruldu) goruldu = ch.uhdEvrakGoruldu.newValue || {};
+      if (ch.uhdIndex) setIndex(ch.uhdIndex.newValue);
+      else if (ch.uhdEvrakGoruldu) computeYeni();
+      if (ch.uhdIndex || ch.uhdEvrakGoruldu) { renderFilters(); redraw = true; }
       if (ch.uhdNotes) { notes = ch.uhdNotes.newValue || {}; redraw = true; }
       if (ch.uhdRecent) recent = ch.uhdRecent.newValue || [];
       if (ch.uhdPrefs) {
         prefs = ch.uhdPrefs.newValue || {};
         if (document.activeElement !== nameInput && (!root.getRootNode().activeElement || root.getRootNode().activeElement !== nameInput)) nameInput.value = prefs.myName || '';
         duyuruBox.checked = !prefs.showDuyuru;
+        evrakBox.checked = !prefs.evrakKapali;
         redraw = true;
       }
       if (ch.uhdProgress) {
@@ -563,7 +658,7 @@
       }
       if (redraw && !editing) render();
       renderStatus();
-      if (ch.uhdIndex || ch.uhdProgress) autoNotice();
+      if (ch.uhdIndex || ch.uhdProgress || ch.uhdEvrakGoruldu) autoNotice();
     });
     setInterval(renderStatus, 5000);
 

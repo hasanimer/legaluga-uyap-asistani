@@ -129,11 +129,12 @@
   const wordStart = (list, t) => list.some(p => p.startsWith(t) || p.includes(' ' + t));
 
   // Tüm kelimeler geçmeli; dosya numarası, müvekkil ve taraf adı başından eşleşmeler öne çıkar.
-  // o: { myName, notes: {key: metin}, filter: {durum, tur, onlyClient}, limit }
+  // o: { myName, notes: {key: metin}, filter: {durum, tur, onlyClient, onlyNew}, yeni: Map(key → en yeni evrak zamanı), limit }
   function search(records, query, o = {}) {
     const ts = tokens(query);
     const f = o.filter || {};
-    const filtered = (f.durum && f.durum !== 'all') || (f.tur && f.tur !== 'all') || f.onlyClient;
+    const filtered = (f.durum && f.durum !== 'all') || (f.tur && f.tur !== 'all') || f.onlyClient || f.onlyNew;
+    const yeni = o.yeni || new Map();
     if (!ts.length && !filtered) return { total: 0, items: [], tokens: ts };
     const keys = myKeys(o.myName);
     const ctx = keys.join('|');
@@ -141,6 +142,7 @@
     const hits = [];
     for (const r of records) {
       if (!passFilter(r, f)) continue;
+      if (f.onlyNew && !yeni.has(r.key)) continue;
       const c = info(r, keys, ctx);
       if (f.onlyClient && !c.clients.length) continue;
       const hay = f.onlyClient ? c.clientOnly : c.all;
@@ -160,6 +162,7 @@
     }
     hits.sort((a, b) =>
       b.score - a.score ||
+      (yeni.get(b.r.key) || 0) - (yeni.get(a.r.key) || 0) ||
       (a.r.sorguDurum || 0) - (b.r.sorguDurum || 0) ||
       (b.r.acilisTs || 0) - (a.r.acilisTs || 0));
     const limit = o.limit || 60;
@@ -177,6 +180,59 @@
     return '/dosya-sorgulama?' + p.toString();
   }
 
+  // ------------------------------------------------ evrak takibi
+  // list_dosya_evraklar.ajx yanıtındaki evrakId ve dosyaId her istekte yeniden şifrelenir: aynı evrak her
+  // yanıtta başka kimlikle gelir. Bu yüzden evrak, birim evrak no + onay tarihi + tür üçlüsüyle tanınır.
+  const evrakKey = e => (e && e.birimEvrakNo != null && e.birimEvrakNo !== '' && e.onaylandigiTarih)
+    ? `${e.birimEvrakNo}|${e.onaylandigiTarih}|${e.tur || ''}` : null;
+
+  // "12/09/2026" → zaman damgası (sıralama için); tanınmayan biçimde 0.
+  function trDateTs(s) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(s || ''));
+    return m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : 0;
+  }
+
+  // Bir yanıt sayfası → { items, bad }. tumEvraklar dosyayı ve bağlı dosyaları (talimat, soruşturma…)
+  // "2025/9101(Ceza Dava Dosyası)" başlıklarıyla gruplar; yoksa yalnız son20Evrak kullanılır.
+  // Kimliği ya da onay tarihi eksik evrak tahminle eşleştirilmez, "bad" olarak sayılır.
+  function parseEvraklar(res) {
+    const str = v => (v == null ? '' : String(v)).trim();
+    let list = null;
+    if (res && res.tumEvraklar && typeof res.tumEvraklar === 'object' && !Array.isArray(res.tumEvraklar)) {
+      list = Object.entries(res.tumEvraklar).flatMap(([g, arr]) => (Array.isArray(arr) ? arr : []).map(e => [g, e]));
+    } else if (res && Array.isArray(res.son20Evrak)) {
+      list = res.son20Evrak.map(e => ['', e]);
+    }
+    if (!list) throw new Error('Evrak listesi okunamadı.');
+    const items = [];
+    let bad = 0;
+    for (const [g, e] of list) {
+      const k = evrakKey(e);
+      if (!k) { bad++; continue; }
+      items.push({
+        k, tur: str(e.tur), onay: str(e.onaylandigiTarih), gonderim: str(e.sistemeGonderildigiTarih),
+        gonderen: str(e.gonderenYerKisi), aciklama: str(e.aciklama).slice(0, 200), dosya: str(g)
+      });
+    }
+    return { items, bad };
+  }
+
+  // İlk tarama başlangıç sayılır (yeni evrak yok). Sonrakilerde önceki taramalarda görülmemiş anahtarlar yenidir.
+  // seen birleşim olarak tutulur; böylece listeden bir kez düşüp geri gelen evrak yeniden "yeni" sayılmaz.
+  function diffEvrak(prevSeen, items) {
+    const uniq = new Map();
+    for (const i of items) if (!uniq.has(i.k)) uniq.set(i.k, i);
+    const prev = Array.isArray(prevSeen) ? new Set(prevSeen) : null;
+    const yeni = prev ? [...uniq.values()].filter(i => !prev.has(i.k)) : [];
+    yeni.sort((a, b) => trDateTs(b.onay) - trDateTs(a.onay));
+    const seen = prev ? [...prev] : [];
+    for (const k of uniq.keys()) if (!prev || !prev.has(k)) seen.push(k);
+    return { seen, yeni };
+  }
+
+  // Görüldü olarak işaretlenmemiş yeni evraklar (goruldu: {kayıtKey: zaman}).
+  const unseenEvrak = (r, goruldu) => (r.yeniEvrak || []).filter(y => (y.at || 0) > ((goruldu && goruldu[r.key]) || 0));
+
   // UYAP'tan gelen değerler (taraf, vekil adı…) =, +, -, @ ya da sekme/satır başıyla başlıyorsa
   // Excel onları formül olarak çalıştırabilir; başa kesme işareti eklenerek düz metne çevrilir.
   const csvCell = v => {
@@ -190,5 +246,5 @@
   const fmtNum = n => Number(n || 0).toLocaleString('tr-TR');
   const fmtDate = ts => ts ? new Date(ts).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo };
+  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak };
 })();

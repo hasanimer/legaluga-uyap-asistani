@@ -1,15 +1,18 @@
 // UYAP Avukat Portalı sekmesinde çalışır.
-// - Güncelleme: UYAP ekranının kendi kullandığı JSON uçlarıyla dosya listesi ve taraf adları alınır.
+// - Güncelleme: UYAP ekranının kendi kullandığı JSON uçlarıyla dosya listesi, taraf adları ve
+//   açık dosyaların evrak listesi alınır; evrak listesi önceki taramayla karşılaştırılıp yeni evraklar işaretlenir.
 // - Dosya açma: Dosya Sorgulama ekranı açılır, form doldurulur, Sorgula'ya basılır,
 //   sonuçta ilgili satırın "Pencere Görünümü" düğmesine tıklanır.
 (() => {
   if (window.__uhdLoaded) return;
   window.__uhdLoaded = true;
 
-  const { TURLER, norm, openPath } = globalThis.UHD;
+  const { TURLER, norm, openPath, parseEvraklar, diffEvrak } = globalThis.UHD;
   const OWNER = Math.random().toString(36).slice(2);
   const DELAY = 150;
   const TARAF_V = 2; // 2: taraflarla birlikte vekiller de saklanır
+  const EVRAK_PAGES = 20;   // bir dosyanın evrak listesinde en çok bu kadar sayfa okunur
+  const YENI_MAX = 50;      // dosya başına saklanan görülmemiş yeni evrak sayısı
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pad = n => String(n).padStart(2, '0');
   const visible = e => !!e && e.isConnected && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
@@ -139,12 +142,36 @@
       .filter(p => p.adi);
   }
 
+  // UYAP'ın Evrak Getir ekranıyla aynı istek. Birden çok sayfa varsa hepsi (en çok EVRAK_PAGES) okunur.
+  async function fetchEvraklar(dosyaId) {
+    const ok = r => r && typeof r === 'object' && !Array.isArray(r) && (r.tumEvraklar || r.son20Evrak);
+    let res = await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: 1 });
+    if (!ok(res)) {
+      // UYAP'ın kendi penceresi önce işlem türlerini sorgular; gerekirse aynı sırayı izle.
+      await api('dosya_islem_turleri_sorgula_brd.ajx', { dosyaId });
+      await sleep(DELAY);
+      res = await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: 1 });
+    }
+    const { items, bad } = parseEvraklar(res);
+    const pages = Math.min(Number(res.pageTotal) || 1, EVRAK_PAGES);
+    let skipped = bad;
+    for (let page = 2; page <= pages; page++) {
+      checkStop();
+      await sleep(DELAY);
+      const more = parseEvraklar(await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: page }));
+      items.push(...more.items);
+      skipped += more.bad;
+    }
+    return { items, bad: skipped };
+  }
+
   async function runUpdate(full) {
     const startedAt = Date.now();
     let merged = null;
     let summary = '';
     try {
-      const { uhdIndex } = await chrome.storage.local.get('uhdIndex');
+      const { uhdIndex, uhdPrefs } = await chrome.storage.local.get(['uhdIndex', 'uhdPrefs']);
+      const evrakTakip = !(uhdPrefs && uhdPrefs.evrakKapali);
       const old = new Map(((uhdIndex && uhdIndex.records) || []).map(r => [r.key, r]));
       const found = new Map();
       const failed = new Set();
@@ -195,7 +222,11 @@
       for (const [k, r] of found) {
         const o = old.get(k);
         if (!o) added++;
-        merged.set(k, { ...r, taraflar: o ? o.taraflar : null, tarafAt: o ? o.tarafAt : 0, tarafV: o ? o.tarafV : 0 });
+        merged.set(k, {
+          ...r,
+          taraflar: o ? o.taraflar : null, tarafAt: o ? o.tarafAt : 0, tarafV: o ? o.tarafV : 0,
+          evrakSeen: o ? o.evrakSeen : undefined, evrakAt: o ? o.evrakAt : 0, yeniEvrak: o ? o.yeniEvrak : undefined
+        });
       }
       for (const [k, o] of old) {
         if (merged.has(k)) continue;
@@ -226,8 +257,46 @@
       }
       await saveIndex(merged);
 
+      // 4) Evrak takibi: yalnız açık ve bu taramada bulunan dosyalar (dosyaId yalnız aynı oturumda geçerli).
+      let yeniEvrak = 0, yeniDosya = 0, evrakErrors = 0, evrakBad = 0;
+      if (evrakTakip) {
+        const eneed = [...merged.values()].filter(r => r.sorguDurum !== 1 && found.has(r.key));
+        const ePhaseStart = Date.now();
+        let eDone = 0;
+        streak = 0;
+        for (const r of eneed) {
+          checkStop();
+          try {
+            const { items, bad } = await fetchEvraklar(r.dosyaId);
+            const { seen, yeni } = diffEvrak(r.evrakSeen, items);
+            r.evrakSeen = seen;
+            r.evrakAt = Date.now();
+            evrakBad += bad;
+            if (yeni.length) {
+              const at = Date.now();
+              r.yeniEvrak = [...yeni.map(y => ({ ...y, at })), ...(r.yeniEvrak || [])].slice(0, YENI_MAX);
+              yeniEvrak += yeni.length;
+              yeniDosya++;
+            }
+            streak = 0;
+          } catch (e) {
+            if (e instanceof Fatal || e instanceof Stopped) throw e;
+            evrakErrors++;
+            if (++streak >= 8) throw new Fatal('Evrak listeleri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
+          }
+          eDone++;
+          if (eDone % 25 === 0) await saveIndex(merged);
+          await setProgress({ running: true, phase: 'evrak', done: eDone, total: eneed.length, phaseStart: ePhaseStart, text: `Yeni evraklar kontrol ediliyor: ${eDone}/${eneed.length}` });
+          await sleep(DELAY);
+        }
+        await saveIndex(merged);
+      }
+
       summary = `Güncelleme tamamlandı: ${merged.size.toLocaleString('tr-TR')} dosya, ${added} yeni`;
+      if (yeniEvrak) summary += `; ${yeniDosya} dosyada ${yeniEvrak} yeni evrak`;
       if (errors) summary += `, ${errors} dosyanın tarafları alınamadı`;
+      if (evrakErrors) summary += `, ${evrakErrors} dosyanın evrakları alınamadı`;
+      if (evrakBad) summary += `, ${evrakBad} evrakta kimlik/tarih eksik olduğu için karşılaştırılamadı`;
       if (failed.size) summary += `, ${failed.size} sorgu grubu hata verdi (eski kayıtlar korundu)`;
       summary += '.';
       await setProgress({ running: false, text: summary, endedAt: Date.now(), startedAt });

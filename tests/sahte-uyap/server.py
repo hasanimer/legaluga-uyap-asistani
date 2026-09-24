@@ -1,6 +1,6 @@
 # Sahte UYAP sunucusu: eklentinin güncelleme ve düğme bulma akışını test etmek için.
 # Yanıtlar windows-1254 kodlamasıyla döner (gerçek UYAP yanıtlarında Türkçe karakterler UTF-8 değil).
-import json, os, sys
+import datetime, json, os, random, sys
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +38,30 @@ def taraflar(dosya_id):
     return [{"adi": f"{ADLAR[h % 10]} {SOYADLAR[(h // 10) % 10]}", "rol": "Sanık" if 'Ceza' in BY_ID[dosya_id]['dosyaTur'] else "Davalı", "kisiKurum": "Kişi", **({"vekil": "[DENİZ KARAKAYA]"} if h % 3 == 0 else {})},
             {"adi": f"{ADLAR[(h // 7) % 10]} {SOYADLAR[(h // 3) % 10]}", "rol": "Mağdur" if 'Ceza' in BY_ID[dosya_id]['dosyaTur'] else "Davacı", "vekil": "[TEST AVUKAT]", "kisiKurum": "Kişi"}]
 
+# Evrak listesi. Gerçek UYAP gibi evrakId/dosyaId her yanıtta yeniden "şifrelenir" (rastgele);
+# eklenti evrakları birimEvrakNo + onay tarihi + tür ile tanımalı. Her 4 dosyadan birine her sorguda bir evrak eklenir.
+EVRAK_CALLS = {}
+EVRAK_TURLERI = ['Duruşma Zaptı', 'Bilirkişi Raporu', 'Kapalı E-Tebliğ Mazbatası', 'Ara Karar', 'Diğer Evrak']
+
+def evraklar(dosya_id):
+    d = BY_ID[dosya_id]
+    n = EVRAK_CALLS[dosya_id] = EVRAK_CALLS.get(dosya_id, 0) + 1
+    h = sum(map(ord, dosya_id))
+    count = 3 + ((n - 1) if h % 4 == 0 else 0)
+    sifre = lambda: '"' + ''.join(random.choice('abcdefXYZ0123456789') for _ in range(40)) + '"'
+    def evrak(j, grup_no):
+        onay = datetime.date(2026, 1, 1) + datetime.timedelta(days=3 * j)
+        gonderim = onay - datetime.timedelta(days=j % 3)
+        return {"evrakId": sifre(), "dosyaId": sifre(), "ggEvrakId": sifre(), "birimEvrakNo": 1000 * (h % 97) + j + grup_no,
+                "onaylandigiTarih": onay.strftime('%d/%m/%Y'), "sistemeGonderildigiTarih": gonderim.strftime('%d/%m/%Y'),
+                "gonderenYerKisi": d['birimAdi'], "tur": EVRAK_TURLERI[j % 5], "tip": "GDN",
+                "aciklama": f"Örnek evrak {j}", "ekEvrakListesi": [], "isYetkili": True}
+    ana = [evrak(j, 0) for j in range(count, 0, -1)]
+    gruplar = {f"{d['dosyaNo']}({d['dosyaTur']})": ana}
+    if h % 3 == 0:
+        gruplar["2024/555(Talimat Dosyası)"] = [evrak(j, 500) for j in (2, 1)]
+    return {"tumEvraklar": gruplar, "son20Evrak": ana[:20], "pageTotal": 1, "status": 200}
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         sys.stderr.write("%s\n" % (fmt % a))
@@ -74,6 +98,8 @@ class H(BaseHTTPRequestHandler):
             out = [rows[(page - 1) * size: page * size], len(rows)]
         elif p == 'dosya_taraf_bilgileri_brd.ajx':
             out = taraflar(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
+        elif p == 'list_dosya_evraklar.ajx':
+            out = evraklar(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
         else:
             out = {}
         self.send(200, json.dumps(out, ensure_ascii=False).encode('windows-1254'), 'text/json')

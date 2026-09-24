@@ -1,6 +1,6 @@
 # Legaluga UYAP Asistanı
 
-UYAP Avukat Portalı (`avukat.uyap.gov.tr`) için Chrome eklentisi (Manifest V3). Avukatın dosyalarını ad, soyad, dosya numarası, mahkeme adı veya notla yerel indekste arar; **Dosya Görüntüle** ile dosyayı UYAP'ın Dosya Sorgulama ekranında bulup **Pencere Görünümü**'nde açar.
+UYAP Avukat Portalı (`avukat.uyap.gov.tr`) için Chrome eklentisi (Manifest V3). Avukatın dosyalarını ad, soyad, dosya numarası, mahkeme adı veya notla yerel indekste arar; **Dosya Görüntüle** ile dosyayı UYAP'ın Dosya Sorgulama ekranında bulup **Pencere Görünümü**'nde açar. Güncellemede açık dosyalara gelen yeni evrakları da bulup gösterir.
 
 Sunucusu yoktur. Veriler yalnız kullanıcının bilgisayarında (`chrome.storage.local`) tutulur. T.C. Adalet Bakanlığı veya UYAP ile resmî bir bağlantısı yoktur.
 
@@ -24,7 +24,7 @@ Klasörü silmeyin ya da taşımayın; Chrome eklentiyi oradan çalıştırır.
 
 1. [UYAP Avukat Portalı](https://avukat.uyap.gov.tr)'na e-imza ile giriş yapın.
 2. Eklenti simgesine tıklayın ya da UYAP sayfasının sağ kenarındaki **Dosya Ara** şeridine basın.
-3. **Güncelle**'ye basın. Eklenti tüm açık ve kapalı dosyalarınızı, ardından taraf ve vekil adlarını UYAP'tan alır. Dosya sayısına göre birkaç dakika sürebilir; bu sırada UYAP sekmesini kapatmayın (popup'ı kapatabilirsiniz). **Durdur** ile yarıda kesebilirsiniz; o ana kadar alınan taraf bilgileri korunur ve sonraki **Güncelle** kaldığı yerden devam eder.
+3. **Güncelle**'ye basın. Eklenti tüm açık ve kapalı dosyalarınızı, ardından taraf ve vekil adlarını ve açık dosyaların evrak listesini UYAP'tan alır. Dosya sayısına göre birkaç dakika sürebilir; bu sırada UYAP sekmesini kapatmayın (popup'ı kapatabilirsiniz). **Durdur** ile yarıda kesebilirsiniz; o ana kadar alınan taraf bilgileri korunur ve sonraki **Güncelle** kaldığı yerden devam eder.
 
 Sonraki güncellemelerde yalnız yeni ve eksik dosyaların taraf bilgileri alınır, bu yüzden çok daha kısa sürer. Liste 7 günden eskiyse eklenti hatırlatır. **Tümünü yenile** her şeyi baştan alır.
 
@@ -54,7 +54,19 @@ Sonuçta **Dosya Görüntüle**'ye basın (ya da ↑↓ ile seçip **Enter**). E
 
 Dosya açılamazsa bildirimde nedeni yazar; Dosya Sorgulama ekranı yine doldurulmuş olarak kalır, satırı elle açabilirsiniz. Dosya yakın zamanda kapandı ya da taşındıysa önce **Güncelle**'ye basın.
 
-### 4. Diğer özellikler
+### 4. Yeni evraklar
+
+Her **Güncelle**'de açık dosyaların evrak listesi (UYAP'taki **Evrak Getir** ekranının listesi) bir önceki güncellemeyle karşılaştırılır:
+
+- **İlk güncelleme başlangıçtır:** o ana kadarki evraklar "görülmüş" sayılır, yeni evrak gösterilmez. Yeni evraklar ikinci güncellemeden itibaren çıkar.
+- Yeni evrak gelen dosyalarda **Yeni evrak** etiketi ve evrakların türü, tarihi, göndereni görünür. Tarih UYAP'ın sıraladığı **onay tarihi**dir; sisteme gönderim tarihi farklıysa parantez içinde o da yazılır (ör. `Onay 12/09/2026 (sisteme gönderim 10/09/2026)`).
+- Dosyaya bağlı talimat ya da soruşturma dosyasına gelen evrak da gösterilir; hangi dosyaya geldiği ayrıca yazılır.
+- Paneldeki **… dosyada … yeni evrak var · Göster** bildirimi ya da **Yeni evrak** filtresi yalnız bu dosyaları listeler.
+- **Görüldü** o dosyanın yeni evraklarını listeden kaldırır; filtre açıkken **Tümünü görüldü say** hepsini kaldırır. Sonraki güncellemelerde gelen evraklar yine görünür.
+
+Evrakların kendisi ve içerikleri indirilmez; yalnız liste bilgisi (tür, tarih, gönderen, açıklama, birim evrak no) saklanır. Kapalı dosyalar kontrol edilmez. Her açık dosya için UYAP'a bir istek daha gittiği için güncelleme biraz uzar; istemezseniz **Ayarlar → Güncellemede açık dosyalardaki yeni evrakları bul** işaretini kaldırın.
+
+### 5. Diğer özellikler
 
 - **Kopyala:** Dosya künyesini (`Ankara 14. Asliye Hukuk Mahkemesi 2025/123 E.` biçiminde) panoya kopyalar; dilekçeye yapıştırmak için.
 - **Not ekle:** Dosyaya yalnız bu bilgisayarda görünen not yazın (Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer). Notlar aramada da bulunur.
@@ -64,7 +76,7 @@ Dosya açılamazsa bildirimde nedeni yazar; Dosya Sorgulama ekranı yine dolduru
 
 ### Verileriniz
 
-Dosya listesi, taraf adları, notlar ve ayarlar yalnız bu bilgisayarda Chrome'un eklenti deposunda tutulur; Legaluga'ya ya da başka bir sunucuya gönderilmez. Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve UYAP'a yalnız siz **Güncelle**'ye bastığınızda, sizin oturumunuzla, UYAP'ın kendi ekranlarının kullandığı istekleri yapar. **Ayarlar → Tüm verileri sil** her şeyi siler; eklentiyi kaldırmak da siler. Ayrıntı: [Gizlilik politikası](https://legaluga.com/gizlilik/uyap-asistani).
+Dosya listesi, taraf adları, açık dosyaların evrak listesi, notlar ve ayarlar yalnız bu bilgisayarda Chrome'un eklenti deposunda tutulur; Legaluga'ya ya da başka bir sunucuya gönderilmez. Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve UYAP'a yalnız siz **Güncelle**'ye bastığınızda, sizin oturumunuzla, UYAP'ın kendi ekranlarının kullandığı istekleri yapar. **Ayarlar → Tüm verileri sil** her şeyi siler; eklentiyi kaldırmak da siler. Ayrıntı: [Gizlilik politikası](https://legaluga.com/gizlilik/uyap-asistani).
 
 ### Sorun giderme
 
@@ -72,6 +84,7 @@ Dosya listesi, taraf adları, notlar ve ayarlar yalnız bu bilgisayarda Chrome'u
 | --- | --- |
 | "UYAP sekmesi eklentiye yanıt vermedi" | UYAP sekmesini yenileyin (F5) ve tekrar deneyin. Eklentiyi yeni kurduysanız açık UYAP sekmeleri yenilenmeden çalışmaz. |
 | Güncelleme oturum hatasıyla durdu | UYAP oturumunuz düşmüş olabilir; yeniden giriş yapıp **Güncelle**'ye basın, kaldığı yerden devam eder. |
+| Yeni evrak görünmüyor | İlk güncelleme başlangıç sayılır; yeni evraklar ikinci güncellemeden itibaren çıkar. Ayarlar'da evrak kontrolünün açık olduğunu ve dosyanın açık olduğunu kontrol edin. |
 | Aradığım dosya çıkmıyor | Yeni açılan dosyalar için **Güncelle**'ye basın; filtrelerin kapalı olduğunu kontrol edin. |
 | Dosya açılmıyor | Bildirimdeki mesajı ve Chrome konsolundaki (F12) `[Legaluga]` satırlarını info@legaluga.com'a gönderin. Ekran görüntüsünde müvekkil bilgisi varsa kapatın. |
 
@@ -82,8 +95,8 @@ Dosya listesi, taraf adları, notlar ve ayarlar yalnız bu bilgisayarda Chrome'u
 | `extension/` | Eklentinin kendisi; Chrome'a bu klasör yüklenir |
 | `extension/common.js` | Türkçe normalleştirme, yerel arama, müvekkil tespiti, UYAP açılış adresi; marka adı ve renkleri (`BRAND`) |
 | `extension/ui.js` | Arama arayüzü; popup ve UYAP sayfasındaki yan panel aynı kodu kullanır |
-| `extension/content.js` | UYAP sekmesinde çalışır: güncelleme, düğme bularak dosya açma, açılış duyurusunu gizleme |
-| `tests/arama.test.mjs` | Arama çekirdeğinin birim testleri |
+| `extension/content.js` | UYAP sekmesinde çalışır: güncelleme (dosya listesi, taraflar, evrak kontrolü), düğme bularak dosya açma, açılış duyurusunu gizleme |
+| `tests/arama.test.mjs`, `tests/evrak.test.mjs` | Arama ve evrak takibi çekirdeğinin birim testleri |
 | `tests/sahte-uyap/` | DevExtreme 25 ile kurulmuş sahte Dosya Sorgulama ekranı ve windows-1254 yanıt veren sahte sunucu |
 | `store/` | Mağaza form metinleri ve görselleri (görseller `store/gorsel/*.html` sayfalarından üretilir; veriler uydurmadır) |
 | `scripts/paketle.py` | Mağaza zip'ini üretir |
@@ -91,6 +104,7 @@ Dosya listesi, taraf adları, notlar ve ayarlar yalnız bu bilgisayarda Chrome'u
 ## Nasıl çalışır
 
 - **Güncelleme** (yalnız kullanıcı "Güncelle"ye bastığında): UYAP Detaylı Sorgulama ekranının kendi kullandığı istekler. Her yargı türü ve birim türü için açık/kapalı dosyalar `search_phrase_detayli.ajx` ile listelenir, taraf ve vekil adları `dosya_taraf_bilgileri_brd.ajx` ile alınır. Yanıtlar UTF-8 değilse windows-1254 olarak çözülür.
+- **Evrak takibi** (Güncelle'nin son adımı, Ayarlar'dan kapatılabilir): bu taramada bulunan her açık dosya için `list_dosya_evraklar.ajx {dosyaId, pageNumber}` çağrılır (UYAP'ın Evrak Getir ekranının isteği; `pageTotal` > 1 ise en çok 20 sayfa). Yanıttaki `tumEvraklar` dosyayı ve bağlı dosyaları (talimat, soruşturma…) `"2025/9101(Ceza Dava Dosyası)"` başlıklarıyla gruplar, `son20Evrak` ana dosyanın son 20 evrakıdır. **`evrakId` ve `dosyaId` her yanıtta yeniden şifrelenir** (aynı evrak her istekte farklı kimlikle gelir), bu yüzden evrak `birimEvrakNo|onaylandigiTarih|tur` anahtarıyla tanınır; bu alanlardan biri eksikse evrak tahminle eşleştirilmez, özette sayılır. Görülen anahtarlar kayıtta `evrakSeen`, yeniler `yeniEvrak` olarak tutulur; "Görüldü" zamanları ayrı `uhdEvrakGoruldu` anahtarındadır (güncelleme sürerken indeksle yarışmasın diye).
 - **Arama**: tamamen yerel; yazarken UYAP'a istek gitmez.
 - **Dosya açma**: `/dosya-sorgulama?mode=detayli&yargiTur=…&yargiBirimi=…&dosyaDurum=…` adresi formu hazır doldurur (form yeniden kurulsun diye önce boş bir yola geçilir). Eklenti alanları doğrular, **Sorgula**'ya basar, sonuç tablosunda satırı bulur ve `aria-label="Pencere Görünümü"` düğmesine tıklar. Adımlar konsola `[Legaluga]` önekiyle yazılır; açılamazsa bildirim tablo teşhisini (satır/düğme sayısı) gösterir.
 - **Açılış duyurusu**: UYAP girişte `sessionStorage.showPopupDuyuru2 = "true"` yapar; eklenti bunu "Tekrar Gösterme" düğmesinin yaptığı gibi `"false"` yapar. Ayarlardan kapatılabilir. KVKK rıza penceresine dokunulmaz.
@@ -114,7 +128,7 @@ Düğme bularak açma akışı için sahte UYAP:
 python tests/sahte-uyap/server.py extension 8765
 ```
 
-`http://localhost:8765` açılır; sayfa `chrome.*` API'sini taklit eder. Konsolda `await __uhdSend({type:'uhd-update'})` indeks kurar, `__uhdSend({type:'uhd-open', record})` dosya açar. `localStorage.uyapLike = 1` tabloyu ve düğmeleri gerçek UYAP gibi kimliksiz ve sütun gizlemeli çizer; `localStorage.narrow = 1` dar ekranı, `localStorage.ignoreParams = 1` adres parametrelerini yok sayan formu dener.
+`http://localhost:8765` açılır; sayfa `chrome.*` API'sini taklit eder. Sahte sunucu evrak listesinde kimlikleri her yanıtta rastgele üretir ve her 4 dosyadan birine her sorguda bir evrak ekler; iki güncellemeden sonra "Yeni evrak" görünür. Konsolda `await __uhdSend({type:'uhd-update'})` indeks kurar, `__uhdSend({type:'uhd-open', record})` dosya açar. `localStorage.uyapLike = 1` tabloyu ve düğmeleri gerçek UYAP gibi kimliksiz ve sütun gizlemeli çizer; `localStorage.narrow = 1` dar ekranı, `localStorage.ignoreParams = 1` adres parametrelerini yok sayan formu dener.
 
 ## Sürüm yayınlama
 
