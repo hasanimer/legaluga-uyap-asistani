@@ -1,8 +1,8 @@
-// Popup: tek düğme, haciz türü tikleri, canlı adım göstergesi ve tema.
+// Legaluga haciz ekranı: tür seçimi, canlı adımlar ve ortak görünüm tercihi.
 //
 // Burada dosya/taraf verisi tutulmaz. chrome.storage.local yalnız tercihleri
-// (tema, haciz türü tikleri, ücret onayı, banka talebinin evrak türü) saklar. Adım durumu
-// chrome.storage.session'dadır.
+// (haciz türü tikleri, banka talebinin evrak türü) saklar. Ortak tema
+// uhdPrefs içindedir; adım durumu chrome.storage.session'dadır.
 'use strict';
 
 // background.js ile aynı numara. Tutmuyorsa Chrome hâlâ eklentinin eski
@@ -39,6 +39,7 @@ const el = {
   statusFill: document.getElementById('status-fill'),
   stages: document.getElementById('stages'),
   maasOptions: document.getElementById('maas-options'),
+  bankaOptions: document.getElementById('banka-options'),
   maasStatus: document.getElementById('maas-status'),
   maasEmployer: document.getElementById('maas-employer'),
   version: document.getElementById('version')
@@ -55,7 +56,6 @@ const BANKA_TALEP = ['ihbarname', 'muzekkere'];
 // 89/1 haciz ihbarnamesidir.
 function defaultPrefs() {
   return {
-    theme: 'light',
     toplu: {
       paid: false, egm: true, icra: true, takbis: true, banka: true, maas: false,
       bankaTalep: 'ihbarname'
@@ -66,8 +66,6 @@ function defaultPrefs() {
 let prefs = defaultPrefs();
 
 function applyPrefs() {
-  document.documentElement.dataset.theme = prefs.theme;
-
   // Tik kutuları açık/kapalı değer taşır; radyo düğmeleri (banka talebi)
   // seçili seçeneğin adını.
   for (const input of document.querySelectorAll('[data-opt]')) {
@@ -76,6 +74,7 @@ function applyPrefs() {
     input.checked = input.type === 'radio' ? value === input.value : !!value;
   }
   el.maasOptions.hidden = !prefs.toplu.maas;
+  el.bankaOptions.hidden = !prefs.toplu.banka;
 }
 
 function savePrefs() {
@@ -92,7 +91,6 @@ async function loadPrefs() {
   // Yalnız tanınan alanlar alınır: eski sürümlerden kalan (ödeme türü, bölüm
   // tikleri) anahtarlar taşınmaz.
   if (saved) {
-    if (saved.theme === 'dark' || saved.theme === 'light') prefs.theme = saved.theme;
     prefs.toplu = { ...defaultPrefs().toplu, ...(saved.toplu || {}) };
     prefs.toplu.paid = false;
     if (!BANKA_TALEP.includes(prefs.toplu.bankaTalep)) {
@@ -101,6 +99,32 @@ async function loadPrefs() {
   }
   applyPrefs();
 }
+
+const darkMq = window.matchMedia('(prefers-color-scheme: dark)');
+let themeChoice = 'auto';
+
+function applyTheme() {
+  document.documentElement.dataset.theme = themeChoice === 'auto'
+    ? (darkMq.matches ? 'dark' : 'light') : themeChoice;
+  el.theme.value = themeChoice;
+}
+
+async function loadTheme() {
+  const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
+  themeChoice = ['auto', 'light', 'dark'].includes(uhdPrefs?.tema) ? uhdPrefs.tema : 'auto';
+  applyTheme();
+}
+
+darkMq.addEventListener('change', () => {
+  if (themeChoice === 'auto') applyTheme();
+});
+applyTheme();
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.uhdPrefs) return;
+  const value = changes.uhdPrefs.newValue?.tema;
+  themeChoice = ['auto', 'light', 'dark'].includes(value) ? value : 'auto';
+  applyTheme();
+});
 
 // --- Durum ------------------------------------------------------------------
 
@@ -236,10 +260,11 @@ setInterval(refresh, 5000);
 
 // --- Olaylar ----------------------------------------------------------------
 
-el.theme.addEventListener('click', () => {
-  prefs.theme = prefs.theme === 'dark' ? 'light' : 'dark';
-  applyPrefs();
-  savePrefs();
+el.theme.addEventListener('change', async () => {
+  themeChoice = el.theme.value;
+  applyTheme();
+  const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
+  await chrome.storage.local.set({ uhdPrefs: { ...(uhdPrefs || {}), tema: themeChoice } });
 });
 
 for (const input of document.querySelectorAll('[data-opt]')) {
@@ -249,6 +274,7 @@ for (const input of document.querySelectorAll('[data-opt]')) {
     const [group, key] = input.dataset.opt.split('.');
     prefs[group][key] = input.type === 'radio' ? input.value : input.checked;
     if (key === 'maas') el.maasOptions.hidden = !input.checked;
+    if (key === 'banka') el.bankaOptions.hidden = !input.checked;
     savePrefs();
   });
 }
@@ -370,5 +396,6 @@ el.howto.addEventListener('toggle', () => {
 
 el.version.textContent = `v${chrome.runtime.getManifest().version}`;
 
+loadTheme();
 loadPrefs();
 refresh();

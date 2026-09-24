@@ -85,6 +85,37 @@
 
   let job = null;   // bu sekmede yürüyen iş: { id, stop, lost }
 
+  // Chrome eklenti yenilenince açık UYAP sekmesindeki eski content script'i
+  // hemen kaldırmaz. Eski betik artık storage API'sini kullanamaz; zamanlı
+  // devralma kontrolleri o bağlamda sessizce durmalıdır.
+  let contextGone = false;
+  let resumeInterval = null;
+  let autoInterval = null;
+  function invalidated(error) {
+    return /extension context invalidated|context invalidated/i.test(String(error?.message || error));
+  }
+  function stopInvalidatedContext() {
+    contextGone = true;
+    if (job) job.lost = true;
+    if (resumeInterval !== null) clearInterval(resumeInterval);
+    if (autoInterval !== null) clearInterval(autoInterval);
+  }
+  function contextAvailable() {
+    if (contextGone) return false;
+    try {
+      if (chrome.runtime?.id) return true;
+    } catch (_) {}
+    stopInvalidatedContext();
+    return false;
+  }
+  function scheduled(task) {
+    if (!contextAvailable()) return;
+    Promise.resolve().then(task).catch(error => {
+      if (invalidated(error)) stopInvalidatedContext();
+      else console.error('Legaluga zamanlı işlem hatası:', error);
+    });
+  }
+
   // İstekler arası bekleme. Arka plandaki sekmede Chrome zamanlayıcıları en az 1 sn'ye yuvarladığı için
   // orada yapay bekleme yapılmaz; istekler yine de sırayla, birer birer gider.
   const pace = () => (document.hidden ? Promise.resolve() : sleep(DELAY));
@@ -123,7 +154,7 @@
 
   // Yarıda kalmış işi devral. Oturum düşmesiyle duraklayan iş yalnız sayfa yüklenirken (yeniden girişten sonra) sürer.
   async function maybeResume(pageLoad) {
-    if (job) return;
+    if (job || !contextAvailable()) return;
     const { uhdProgress: p, uhdJob: j } = await chrome.storage.local.get(['uhdProgress', 'uhdJob']);
     if (!j || j.stop) return;
     // Sekme yenilendiyse işi yürüten, bu sekmenin önceki hâliydi: sinyalin eskimesini beklemeden devral.
@@ -494,6 +525,10 @@
       await setProgress({ running: false, final: true, text: summary, endedAt: Date.now(), startedAt });
       toast(summary, 'ok', 6000);
     } catch (e) {
+      if (invalidated(e)) {
+        stopInvalidatedContext();
+        return;
+      }
       // Başka sekme devraldıysa (ör. sayfa geri getirildi) hiçbir şeye dokunmadan çekil.
       if (e instanceof Stopped && e.message === 'lost') return;
       if (merged) await saveIndex(merged).catch(() => {});
@@ -1293,7 +1328,7 @@
       // Başka sekme işi devraldıysa bu sekmedeki kopya çekilir.
       if (job && p && p.owner && p.owner !== OWNER) job.lost = true;
       // Yürüten sekme kapandı: bu sekme devralmayı dener.
-      if (!job && p && p.handoff) setTimeout(() => maybeResume(false), Math.random() * 500);
+      if (!job && p && p.handoff) setTimeout(() => scheduled(() => maybeResume(false)), Math.random() * 500);
       // Güncelleme başka sekmede bittiyse görünür sekmede de bildir.
       if (!job && p && p.final && p.owner !== OWNER && !document.hidden) toast(p.text, 'ok', 6000);
     }
@@ -1303,15 +1338,19 @@
   window.addEventListener('pagehide', () => {
     if (!job) return;
     job.lost = true;
+    if (!contextAvailable()) return;
     chrome.storage.local.set({ uhdProgress: {
       owner: null, running: false, paused: true, handoff: true, beat: 0, endedAt: Date.now(),
       text: 'Güncelleme yarıda kaldı; açık bir UYAP sekmesinde ya da UYAP’ı yeniden açtığınızda kaldığı yerden sürer.'
-    } });
+    } }).catch(error => {
+      if (invalidated(error)) stopInvalidatedContext();
+      else console.error('Legaluga güncelleme devri hatası:', error);
+    });
   });
 
   // Yürüten sekme sinyal vermeden gittiyse (çöktü, Chrome sekmeyi uykuya aldı) bir süre sonra devral.
-  setInterval(() => maybeResume(false), 20000);
-  setTimeout(() => maybeResume(true), 1500);
+  resumeInterval = setInterval(() => scheduled(() => maybeResume(false)), 20000);
+  setTimeout(() => scheduled(() => maybeResume(true)), 1500);
 
   // UYAP açılınca bu sekmede günde bir kez: bugünkü duruşmalar ve son günü 3 gün ya da daha az kalan süreler.
   chrome.storage.local.get(['uhdSureler', 'uhdDurusmalar']).then(({ uhdSureler, uhdDurusmalar }) => {
@@ -1357,14 +1396,14 @@
   // Otomatik güncelleme (Ayarlar'dan açılırsa): UYAP sekmesi açıkken, son güncellemenin üzerinden seçilen süre geçtiyse.
   const OTO_MS = { '6s': 6 * 3600000, gunluk: 24 * 3600000 };
   async function autoUpdate() {
-    if (job || document.hidden) return;
+    if (job || document.hidden || !contextAvailable()) return;
     const { uhdPrefs, uhdIndex, uhdProgress, uhdJob } = await chrome.storage.local.get(['uhdPrefs', 'uhdIndex', 'uhdProgress', 'uhdJob']);
     const every = OTO_MS[uhdPrefs && uhdPrefs.otoGuncelle];
     if (!every || !uhdIndex || !uhdIndex.updatedAt || uhdJob || alive(uhdProgress)) return;
     if (Date.now() - uhdIndex.updatedAt < every) return;
     log('Otomatik güncelleme başlıyor.');
-    startUpdate(false);
+    await startUpdate(false);
   }
-  setTimeout(autoUpdate, 8000);
-  setInterval(autoUpdate, 10 * 60000);
+  setTimeout(() => scheduled(autoUpdate), 8000);
+  autoInterval = setInterval(() => scheduled(autoUpdate), 10 * 60000);
 })();

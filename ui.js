@@ -23,8 +23,10 @@
   --green:#4fd1a5;--green-bg:#0f2e25;--grey:#667085;--grey-bg:#25303c;--amber:#f5b04c;--amber-bg:#33260f;--red:#f97066;
   --note-bg:#2b2716;--note-bd:#b38f1f;--ev-bg:#16233a;--ev-bd:#528bff;--ev-tx:#9ec1ff;--warn-bg:#33270f;--warn-tx:#f5c26b;
   --err-bg:#3a1714;--err-tx:#f7a8a1;--mark:#6b5a12;--hot-bg:#3a1714;--warm-bg:#33260f;color-scheme:dark}
+.uhd[data-theme=dark] :is(.onboard b,.ib:hover,.ib.on,.pmore,.pname:hover,.lnk:hover,.rolein,.dayhead,.durrow .t,.tag){color:#7fd6cc}
 .uhd *{box-sizing:border-box}
 .uhd [hidden]{display:none!important}
+.uhd :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .uhd button{font:inherit;color:inherit}
 .uhd svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .uhd header{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;background:var(--navy);color:#fff}
@@ -268,7 +270,7 @@
     const statusText = el('div', { class: 'stx' });
     const btnUpdate = el('button', { class: 'btn sm primary' }, icon('sync'), el('span', null, 'Güncelle'));
     const btnStop = el('button', { class: 'btn sm danger', hidden: true }, icon('stop'), el('span', null, 'Durdur'));
-    const btnHaciz = opts.onHaciz ? el('button', { class: 'btn sm', title: 'Seçili borçlu için haciz talebi hazırla' }, 'Haciz') : null;
+    const btnHaciz = opts.onHaciz ? el('button', { class: 'btn sm', title: 'Açık icra dosyasında haciz talebi hazırla' }, 'Haciz') : null;
     const btnSettings = el('button', { class: 'ib', title: 'Ayarlar', 'aria-label': 'Ayarlar' }, icon('gear'));
     const root = el('div', { class: 'uhd ' + (opts.mode || '') },
       el('header', null, el('strong', null, BRAND.name), count,
@@ -312,6 +314,7 @@
       root.dataset.theme = t === 'auto' ? (darkMq && darkMq.matches ? 'dark' : 'light') : t;
     }
     if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyTheme);
+    applyTheme();
 
     const pref = (k, d) => (prefs[k] === undefined ? d : prefs[k]);
     async function setPref(k, v) {

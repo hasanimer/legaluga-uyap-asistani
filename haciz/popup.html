@@ -1,25 +1,28 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <title>UYAP Haciz Yardımcısı</title>
+  <title>Haciz hazırlama · Legaluga UYAP Asistanı</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <header class="head">
-    <a class="icon-btn head__back" href="../popup.html" title="Dosya aramaya dön" aria-label="Dosya aramaya dön">←</a>
-    <img class="head__icon" src="../icons/icon-48.png" alt="">
-    <div class="head__title">UYAP Haciz Yardımcısı</div>
-    <button id="theme" class="icon-btn" type="button" title="Koyu / açık mod" aria-label="Koyu / açık mod">
-      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-        <path class="ico-sun" d="M12 4V2m0 20v-2m8-8h2M2 12h2m12.9-4.9 1.4-1.4M5.7 18.3l1.4-1.4m9.8 1.4 1.4 1.4M5.7 5.7 7.1 7.1"
-              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <circle class="ico-sun" cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
-        <path class="ico-moon" d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"
-              fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-      </svg>
-    </button>
+  <header class="app-head">
+    <img src="../icons/icon-48.png" alt="" width="26" height="26">
+    <strong>Legaluga UYAP Asistanı</strong>
+    <span id="version"></span>
   </header>
+  <nav class="app-nav" aria-label="Eklenti bölümleri">
+    <a href="../popup.html">← Dosya ara</a>
+    <span aria-current="page">Haciz hazırlama</span>
+    <select id="theme" aria-label="Görünüm teması" title="Görünüm teması">
+      <option value="auto">Sistem teması</option>
+      <option value="light">Açık tema</option>
+      <option value="dark">Koyu tema</option>
+    </select>
+  </nav>
+
+  <div class="workspace">
+    <p class="intro">Kesinleşmiş icra dosyasında seçtiğiniz borçlu için haciz talebini hazırlayın.</p>
 
   <!-- Durum kutucuğu: çalışırken o an ne yapıldığını, bittiğinde SONUCU
        (kaç kayıt eklendi, evrak oluştu mu) tek cümleyle yazar. -->
@@ -131,7 +134,7 @@
         <!-- Banka talebinin evrak türü de ayrı bir karardır: çizgiyle ayrılır.
              İkisi aynı anda seçilemez; bu yüzden girdiler radyo düğmesidir,
              yalnız görünüşleri tik kutusudur. Öntanımlısı 89/1. -->
-        <div class="evrak check--sep" role="radiogroup" aria-labelledby="evrak-title">
+        <div id="banka-options" class="evrak check--sep" role="radiogroup" aria-labelledby="evrak-title">
           <div id="evrak-title" class="evrak__title">Banka talep türü</div>
           <div class="picks">
             <label class="check">
@@ -158,9 +161,6 @@
         </div>
       </div>
 
-      <p class="safety">Talep evrakı hazırlanır; imza ve gönderme işlemi size kalır.</p>
-      <!-- Düğme bölümün en altındadır: önce ne yapılacağı seçilir, sonra basılır. -->
-      <button id="start" class="start" type="button">Toplu Haczi Hazırla</button>
     </section>
 
     <!-- Bilgilendirme metni burada durur. Üzerine gelince açılan bir kutu
@@ -196,14 +196,15 @@
       </div>
     </details>
   </main>
+  </div>
 
-  <footer>
-    <div class="foot">
-      <span id="version"></span>
-      <span class="foot__dev">Kaynak:
-        <a class="foot__link" href="https://github.com/SCgrS/UYAP-Haciz-Yardimcisi" target="_blank" rel="noopener noreferrer">Çağrı Şahin · MIT</a>
-      </span>
-    </div>
+  <div class="actionbar">
+    <span>Talep evrakı hazırlanır. İmza ve gönderme size aittir.</span>
+    <button id="start" class="start" type="button">Haczi hazırla</button>
+  </div>
+
+  <footer class="app-foot">
+    Haciz akışı: <a href="https://github.com/SCgrS/UYAP-Haciz-Yardimcisi" target="_blank" rel="noopener noreferrer">Çağrı Şahin · MIT</a>
   </footer>
 
   <script src="popup.js"></script>

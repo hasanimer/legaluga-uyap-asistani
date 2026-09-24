@@ -45,7 +45,7 @@ Dosyaları açık/kapalı ve yargı türüne göre süzebilir, aynı kişiye ait
 
 **Maaş haczi:** UYAP'ta ilgili borçlunun **SSK Çalışanı** sorgu sonucunu açın. Haciz ekranında **Maaşın 1/4'ü** seçeneğini ve çalışma durumunu seçin. Eklenti, açık SGK sonucunda tek aktif işyeri varsa unvanını ve vergi numarasını yalnız işlem sırasında okur; maaş veren kurum dosyada yoksa UYAP'ın kurum sorgusuyla eklemeyi dener. Sonuç belirsizse veya kurum bilgileri uyuşmazsa durur. Mevcut kurumu seçmek için adını kutuya aynen yazabilirsiniz. UYAP'ın oluşturduğu talebi ve evrakı kontrol edin.
 
-Haciz yardımcısı **1.10.0** sürümündedir. Chrome Web Mağazası'nda daha eski bir sürüm görünüyorsa bu özellik için kaynak koddan kurulum gerekir.
+Haciz hazırlama ekranı Legaluga'nın arayüzünü ve ortak açık/koyu/sistem tema ayarını kullanır. **1.11.0** sürümündedir. Chrome Web Mağazası'nda daha eski bir sürüm görünüyorsa bu özellik için kaynak koddan kurulum gerekir.
 
 Ücretli sorgu onayı başlangıçta kapalıdır. Seçimlerinizi, UYAP'ın uyarılarını ve oluşturulan evrakı işlemden önce kontrol edin. Haciz modülü [Çağrı Şahin'in MIT lisanslı UYAP Haciz Yardımcısı](https://github.com/SCgrS/UYAP-Haciz-Yardimcisi) projesinden uyarlanmıştır; [özgün lisans bildirimi](haciz/LICENSE) korunmuştur.
 
