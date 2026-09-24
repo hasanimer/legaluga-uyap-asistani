@@ -1,3 +1,4 @@
 html, body { margin: 0; }
 body { width: 480px; height: 600px; overflow: hidden; background: #f5f7fb; }
+@media (prefers-color-scheme: dark) { body { background: #0f1720; } }
 #app { height: 100%; }

@@ -9,11 +9,23 @@ async function uyapTab() {
   return tabs[0] || null;
 }
 
-function noTab() {
-  ui.setNotice('Açık bir UYAP Avukat Portalı sekmesi bulunamadı. Önce UYAP’a giriş yapın.', 'err', {
+// UYAP sekmesi yoksa: UYAP açılır; dosya istendiyse giriş yapıldıktan sonra kendiliğinden açılır (3 dk içinde).
+function noTab(rec) {
+  ui.setNotice(rec
+    ? 'UYAP’ta açık sekme yok. “UYAP’ı aç”a basın; giriş yaptığınızda dosya kendiliğinden açılır.'
+    : 'UYAP’ta açık sekme yok. “UYAP’ı aç”a basıp giriş yapın; sonra tekrar deneyin.', 'err', {
     label: 'UYAP’ı aç',
-    fn: () => chrome.tabs.create({ url: ORIGIN + '/' })
+    fn: async () => {
+      if (rec) await chrome.storage.local.set({ uhdPending: { record: rec, at: Date.now() } });
+      await chrome.tabs.create({ url: ORIGIN + (rec ? openPath(rec) : '/') });
+      window.close();
+    }
   });
+}
+
+async function closeIfWanted() {
+  const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
+  if (!uhdPrefs || uhdPrefs.popupKapat !== false) window.close();
 }
 
 async function focusTab(tab) {
@@ -23,7 +35,7 @@ async function focusTab(tab) {
 
 async function openRecord(rec) {
   const tab = await uyapTab();
-  if (!tab) return noTab();
+  if (!tab) return noTab(rec);
   await focusTab(tab);
   try {
     await chrome.tabs.sendMessage(tab.id, { type: 'uhd-open', record: rec });
@@ -32,7 +44,7 @@ async function openRecord(rec) {
     await chrome.storage.local.set({ uhdPending: { record: rec, at: Date.now() } });
     await chrome.tabs.update(tab.id, { url: ORIGIN + openPath(rec) });
   }
-  window.close();
+  closeIfWanted();
 }
 
 // Evrak UYAP sekmesinde, sayfa içi görüntüleyicide açılır (evrakı UYAP oturumu getirir).
@@ -42,7 +54,7 @@ async function openEvrak(rec, key) {
   await focusTab(tab);
   try {
     await chrome.tabs.sendMessage(tab.id, { type: 'uhd-open-evrak', record: rec, key });
-    window.close();
+    closeIfWanted();
   } catch {
     ui.setNotice('UYAP sekmesi eklentiye yanıt vermedi. Sekmeyi yenileyip tekrar deneyin.', 'err', {
       label: 'Sekmeyi yenile',

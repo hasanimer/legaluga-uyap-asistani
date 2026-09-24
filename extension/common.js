@@ -119,7 +119,10 @@
       birim: norm(r.birimAdi),
       clients,
       parties: clients.concat(others),
+      vekils,
+      fields: base.concat(clients, others),
       all: base.concat(clients, others, vekils).join(' | '),
+      noVek: base.concat(clients, others).join(' | '),
       clientOnly: base.concat(clients).join(' | ')
     };
     infoCache.set(r, c);
@@ -129,13 +132,17 @@
   const wordStart = (list, t) => list.some(p => p.startsWith(t) || p.includes(' ' + t));
 
   // Tüm kelimeler geçmeli; dosya numarası, müvekkil ve taraf adı başından eşleşmeler öne çıkar.
-  // o: { myName, notes: {key: metin}, filter: {durum, tur, onlyClient, onlyNew}, yeni: Map(key → en yeni evrak zamanı), limit }
+  // o: { myName, notes: {key: metin}, filter: {durum, tur, onlyClient, onlyNew, onlySure}, yeni: Map(key → en yeni evrak zamanı),
+  //      sure: Map(key → son gün), gizli: {key: true} (aramada gösterilmeyecek dosyalar), vekilAra: false (karşı vekillerde arama), limit }
+  // Birden çok kelimede, hepsi aynı alanda (ör. mahkeme adında) geçen dosyalar öne çıkar.
   function search(records, query, o = {}) {
     const ts = tokens(query);
     const f = o.filter || {};
     const filtered = (f.durum && f.durum !== 'all') || (f.tur && f.tur !== 'all') || f.onlyClient || f.onlyNew || f.onlySure;
     const yeni = o.yeni || new Map();
     const sure = o.sure || new Map();   // kayıt key → en yakın son gün ("yyyy-mm-dd")
+    const gizli = o.gizli || {};
+    const vekilAra = o.vekilAra !== false;
     if (!ts.length && !filtered) return { total: 0, items: [], tokens: ts };
     const keys = myKeys(o.myName);
     const ctx = keys.join('|');
@@ -145,9 +152,10 @@
       if (!passFilter(r, f)) continue;
       if (f.onlyNew && !yeni.has(r.key)) continue;
       if (f.onlySure && !sure.has(r.key)) continue;
+      if (gizli[r.key]) continue;
       const c = info(r, keys, ctx);
       if (f.onlyClient && !c.clients.length) continue;
-      const hay = f.onlyClient ? c.clientOnly : c.all;
+      const hay = f.onlyClient ? c.clientOnly : vekilAra ? c.all : c.noVek;
       const note = notes[r.key] ? norm(notes[r.key]) : '';
       let score = 0;
       let ok = true;
@@ -159,6 +167,10 @@
         else if (wordStart(c.parties, t)) score += 10;
         if (note.includes(t)) score += 5;
         if (c.birim.includes(t)) score += 2;
+      }
+      if (ok && ts.length > 1) {
+        const fields = f.onlyClient ? c.clients : vekilAra ? c.fields.concat(c.vekils) : c.fields;
+        if (fields.some(x => ts.every(t => x.includes(t))) || (note && ts.every(t => note.includes(t)))) score += 60;
       }
       if (ok) hits.push({ score, r });
     }
@@ -395,6 +407,60 @@
 
   const unseenEvrak = (r, goruldu) => (r.yeniEvrak || []).filter(y => (y.at || 0) > ((goruldu && goruldu[r.key]) || 0));
 
+  // ------------------------------------------------ görünüm
+  // UYAP adları büyük harfle verir; yalnız baş harfleri büyük gösterilir (arama etkilenmez).
+  // Nokta içeren kısaltmalar (A.Ş., T.C., LTD.) ve 2-3 harfli şirket ekleri olduğu gibi kalır.
+  const KEEP_UPPER = new Set(['AŞ', 'A.Ş.', 'LTD', 'LTD.', 'ŞTİ', 'ŞTİ.', 'T.C.', 'TC', 'KOOP.', 'SGK', 'TCDD', 'PTT', 'TMSF', 'TOKİ', 'TBMM']);
+  function trTitle(s) {
+    s = String(s == null ? '' : s);
+    if (!/[A-ZÇĞİÖŞÜ]/.test(s) || /[a-zçğıöşü]/.test(s)) return s;   // yalnız tamamen büyük harfli metin çevrilir
+    return s.split(/(\s+|-|\(|\))/).map(w => {
+      if (!w || /^\s+$|^[-()]$/.test(w)) return w;
+      if (KEEP_UPPER.has(w) || /\.\S/.test(w) || /^[A-ZÇĞİÖŞÜ]\.?$/.test(w)) return w;
+      if (w === 'VE') return 've';
+      const low = w.toLocaleLowerCase('tr-TR');
+      return low.charAt(0).toLocaleUpperCase('tr-TR') + low.slice(1);
+    }).join('');
+  }
+
+  // "Kapalı (2022-02-03 13:44:11.0)" → { label: "Kapalı", tarih: "03.02.2022" }
+  function cleanDurum(durum) {
+    const s = String(durum || '').trim();
+    const m = /^(.*?)\s*\((\d{4})-(\d{2})-(\d{2})[^)]*\)\s*$/.exec(s);
+    return m ? { label: m[1], tarih: `${m[4]}.${m[3]}.${m[2]}` } : { label: s, tarih: '' };
+  }
+
+  // "(Kapatılan)İstanbul Anadolu 2. Asliye Ticaret Mahkemesi" → "İstanbul Anadolu 2. Asliye Ticaret Mahkemesi (kapatılan)"
+  function cleanBirim(birim) {
+    const s = String(birim || '').trim();
+    const m = /^\((.+?)\)\s*(.+)$/.exec(s);
+    return m ? `${m[2]} (${m[1].toLocaleLowerCase('tr-TR')})` : s;
+  }
+
+  // Yeni evrak takibi: yeni kurulumda kapalı. Önceki sürümde açık kullanılıyorsa (taranmış kayıt varsa) açık kalır.
+  function evrakTakipAcik(prefs, records) {
+    prefs = prefs || {};
+    if (typeof prefs.evrakTakip === 'boolean') return prefs.evrakTakip;
+    if (prefs.evrakKapali) return false;
+    return (records || []).some(r => r && r.evrakSeen);
+  }
+
+  // ------------------------------------------------ yedek
+  // Yedek dosyası: { app, format, exportedAt, version, data: { anahtar: değer } }. Başka uygulamanın ya da
+  // desteklenmeyen biçimin dosyası reddedilir; yalnız bilinen anahtarlar geri yüklenir.
+  const BACKUP_APP = 'legaluga-uyap-asistani';
+  const BACKUP_FORMAT = 1;
+  const BACKUP_KEYS = ['uhdIndex', 'uhdNotes', 'uhdSureler', 'uhdEvrakGoruldu', 'uhdDurusmalar', 'uhdPrefs', 'uhdRecent', 'uhdGizli'];
+  function checkBackup(obj) {
+    if (!obj || typeof obj !== 'object' || obj.app !== BACKUP_APP) throw new Error('Bu dosya Legaluga UYAP Asistanı yedeği değil.');
+    if (obj.format !== BACKUP_FORMAT) throw new Error(`Bu yedeğin biçimi (${obj.format}) bu sürümde desteklenmiyor.`);
+    if (!obj.data || typeof obj.data !== 'object') throw new Error('Yedek dosyası bozuk.');
+    const data = {};
+    for (const k of BACKUP_KEYS) if (k in obj.data) data[k] = obj.data[k];
+    if (data.uhdIndex && !Array.isArray(data.uhdIndex.records)) throw new Error('Yedekteki dosya listesi bozuk.');
+    return data;
+  }
+
   // UYAP'tan gelen değerler (taraf, vekil adı…) =, +, -, @ ya da sekme/satır başıyla başlıyorsa
   // Excel onları formül olarak çalıştırabilir; başa kesme işareti eklenerek düz metne çevrilir.
   const csvCell = v => {
@@ -408,5 +474,5 @@
   const fmtNum = n => Number(n || 0).toLocaleString('tr-TR');
   const fmtDate = ts => ts ? new Date(ts).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, parseDurusma, upcomingDurusmalar, uyapDate, durusmaIcs };
+  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles, trTitle, cleanDurum, cleanBirim, evrakTakipAcik, BACKUP_APP, BACKUP_FORMAT, BACKUP_KEYS, checkBackup, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, parseDurusma, upcomingDurusmalar, uyapDate, durusmaIcs };
 })();

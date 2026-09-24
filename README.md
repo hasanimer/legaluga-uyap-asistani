@@ -24,7 +24,7 @@ Klasörü silmeyin ya da taşımayın; Chrome eklentiyi oradan çalıştırır.
 
 1. [UYAP Avukat Portalı](https://avukat.uyap.gov.tr)'na e-imza ile giriş yapın.
 2. Eklenti simgesine tıklayın ya da UYAP sayfasının sağ kenarındaki **Dosya Ara** şeridine basın.
-3. **Güncelle**'ye basın. Eklenti tüm açık ve kapalı dosyalarınızı, ardından taraf ve vekil adlarını ve açık dosyaların evrak listesini UYAP'tan alır. Dosya sayısına göre birkaç dakika sürebilir. Bu sırada UYAP'ta gezinebilir, başka sekmelerde ya da programlarda çalışabilirsiniz; güncelleme arka planda sürer. **Durdur** ile yarıda kesebilirsiniz; o ana kadar alınan bilgiler korunur.
+3. **Güncelle**'ye basın. Eklenti tüm açık ve kapalı dosyalarınızı, taraf ve vekil adlarını ve duruşmalarınızı UYAP'tan alır (yeni evrak takibi isteğe bağlıdır, aşağıya bakın). Dosya sayısına göre birkaç dakika sürebilir. Bu sırada UYAP'ta gezinebilir, başka sekmelerde ya da programlarda çalışabilirsiniz; güncelleme arka planda sürer. **Durdur** güncellemeyi duraklatır; **Sürdür** kaldığı yerden devam ettirir, **İptal et** bırakır.
 
 **Güncelleme yarıda kalırsa** kendiliğinden kaldığı yerden sürer:
 
@@ -35,9 +35,9 @@ Klasörü silmeyin ya da taşımayın; Chrome eklentiyi oradan çalıştırır.
 | UYAP oturumu düştü | Güncelleme duraklar; UYAP'a yeniden girdiğinizde sürer. |
 | Chrome sekmeyi uykuya aldı ya da kapandı | En geç 2 dakika içinde açık başka bir UYAP sekmesi, ya da UYAP'ı bir sonraki açışınızda sürer. |
 
-Yarıda kalmış bir güncelleme varken **Güncelle** düğmesi **Sürdür** olur; **İptal et** onu bırakır. Liste alma adımında kalındıysa dosya listesi yeniden alınır (kısa sürer), taraf ve evrak adımları kaldığı yerden sürer.
+Yarıda kalmış ya da durdurulmuş bir güncelleme varken **Güncelle** düğmesi **Sürdür** olur; **İptal et** onu bırakır. Durdurduğunuz güncelleme kendiliğinden başlamaz. Liste alma adımında kalındıysa dosya listesi yeniden alınır (kısa sürer), taraf ve evrak adımları kaldığı yerden sürer.
 
-Sonraki güncellemelerde yalnız yeni ve eksik dosyaların taraf bilgileri alınır, bu yüzden çok daha kısa sürer. Liste 7 günden eskiyse eklenti hatırlatır. **Tümünü yenile** her şeyi baştan alır.
+Sonraki güncellemelerde yalnız yeni ve eksik dosyaların taraf bilgileri alınır, bu yüzden çok daha kısa sürer. Liste 7 günden eskiyse eklenti hatırlatır. **Ayarlar → Baştan tara** tüm dosyaların taraflarını yeniden alır. **Ayarlar → Otomatik güncelleme** (6 saatte bir / günde bir) açılırsa, UYAP sekmesi açıkken güncelleme kendiliğinden başlar; varsayılanı kapalıdır.
 
 ### 2. Arama
 
@@ -48,10 +48,12 @@ Arama kutusuna yazmaya başlayın; sonuçlar anında gelir ve yazarken UYAP'a is
 | Taraf adı / soyadı | `yılmaz`, `ayşe yıl` |
 | Dosya numarası | `2025/123`, `123` |
 | Mahkeme / birim | `ankara 14 asliye hukuk`, `icra` |
-| Karşı taraf vekili | vekilin adı |
+| Karşı taraf vekili | vekilin adı (Ayarlar'dan kapatılabilir) |
 | Kendi notunuz | notta geçen bir kelime |
 
-- Birden çok kelime yazarsanız hepsini içeren dosyalar gelir; sıra önemsizdir.
+- Birden çok kelime yazarsanız hepsini içeren dosyalar gelir; sıra önemsizdir. Kelimelerin hepsi aynı yerde (ör. mahkeme adında) geçen dosyalar önce gelir.
+- Arama kutusundaki **?** nerelerde arandığını gösterir; **×** aramayı temizler (Esc de temizler).
+- Karşı taraf vekillerinin adlarında arama **Ayarlar**'dan kapatılabilir.
 - Türkçe karakter gerekmez: `sukru` = `Şükrü`, `IŞIK` = `ışık`.
 - Kutu boşken **Son açılanlar** listelenir.
 
@@ -61,7 +63,9 @@ Arama kutusuna yazmaya başlayın; sonuçlar anında gelir ve yazarken UYAP'a is
 
 ### 3. Dosyayı açma
 
-Sonuçta **Dosya Görüntüle**'ye basın (ya da ↑↓ ile seçip **Enter**). Eklenti UYAP'ın Dosya Sorgulama ekranını açar, yargı türü, birim ve durumu seçer, **Sorgula**'ya basar, tablodaki satırı bulur ve dosyayı **Pencere Görünümü**'nde açar. Adımlar sağ altta kısa bildirimlerle görünür.
+Sonuçta **Dosya Görüntüle**'ye ya da kartın boş bir yerine basın. Klavyeyle: arama kutusundayken **↑ ↓** ya da **Tab / Shift+Tab** ile seçip **Enter**. Eklenti UYAP'ın Dosya Sorgulama ekranını açar, yargı türü, birim ve durumu seçer, **Sorgula**'ya basar, tablodaki satırı bulur ve dosyayı **Pencere Görünümü**'nde açar. Adımlar sağ altta kısa bildirimlerle görünür.
+
+**Ayarlar → Dosya açılınca geçilecek sekme** seçilirse (Evrak / Taraf bilgileri) dosya penceresinde o sekmeye geçilir; sekme o dosyada yoksa hiçbir şeye basılmaz. UYAP açık değilken popup'tan dosya açarsanız **UYAP'ı aç**'a basın; giriş yaptığınızda (3 dakika içinde) dosya kendiliğinden açılır. Popup'ın dosya açınca kapanması Ayarlar'dan kapatılabilir.
 
 Dosya açılamazsa bildirimde nedeni yazar; Dosya Sorgulama ekranı yine doldurulmuş olarak kalır, satırı elle açabilirsiniz. Dosya yakın zamanda kapandı ya da taşındıysa önce **Güncelle**'ye basın.
 
@@ -76,7 +80,7 @@ Her **Güncelle**'de açık dosyaların evrak listesi (UYAP'taki **Evrak Getir**
 - Paneldeki **… dosyada … yeni evrak var · Göster** bildirimi ya da **Yeni evrak** filtresi yalnız bu dosyaları listeler.
 - **Görüldü** o dosyanın yeni evraklarını listeden kaldırır; filtre açıkken **Tümünü görüldü say** hepsini kaldırır. Sonraki güncellemelerde gelen evraklar yine görünür.
 
-Güncellemede evrakların kendisi indirilmez; yalnız liste bilgisi (tür, tarih, gönderen, açıklama, birim evrak no) saklanır. Kapalı dosyalar kontrol edilmez. Her açık dosya için UYAP'a bir istek daha gittiği için güncelleme biraz uzar; istemezseniz **Ayarlar → Güncellemede açık dosyalardaki yeni evrakları bul** işaretini kaldırın.
+Güncellemede evrakların kendisi indirilmez; yalnız liste bilgisi (tür, tarih, gönderen, açıklama, birim evrak no) saklanır. Kapalı dosyalar kontrol edilmez. Her açık dosya için UYAP'a bir istek daha gittiği için güncelleme belirgin uzar (istekler üçer üçer gider); bu yüzden yeni kurulumda **kapalıdır**, **Ayarlar → Güncelleme → Yeni evrakları bul** ile açılır.
 
 ### 5. Müvekkil kartı
 
@@ -122,12 +126,20 @@ Hatırlatmalar:
 
 > **Önemli:** Eklenti yasal süreyi belirlemez. Tebliğ tarihini ve süreyi siz girersiniz; evrak tarihi tebliğ tarihi olmayabilir (e-tebligatta tebliğ, adrese ulaştığı günü izleyen 5. günün sonunda yapılmış sayılır). Son gün yalnız takvimle önerilir: resmî ve dinî bayramlar ile adli tatil uzaması uygulanmaz. Hatırlatmalar yalnız bu bilgisayarda tutulur ve Chrome kapalıyken bildirim gönderilmez.
 
-### 9. Diğer özellikler
+### 9. Kart düzeni
+
+Her dosya bir kart: üstte **mahkeme · esas no**, altında taraflar. Sol kenar rengi durumu gösterir: yeşil açık, gri kapalı, turuncu karara çıkmış. Sağ üstteki simgeler: **künyeyi kopyala**, **not**, **süre ekle**, **aramalarda gösterme**. **Detay** durum, dosya türü, açılış tarihi ve son evrakı açar. Adlar baş harfleri büyük gösterilir (arama etkilenmez). Çok taraflı dosyalarda **Tüm tarafları göster** hepsini açar. Koyu mod: **Ayarlar → Tema** (varsayılanı sistemle aynı).
+
+### 10. Diğer özellikler
 
 - **Kopyala:** Dosya künyesini (`Ankara 14. Asliye Hukuk Mahkemesi 2025/123 E.` biçiminde) panoya kopyalar; dilekçeye yapıştırmak için.
-- **Not ekle:** Dosyaya yalnız bu bilgisayarda görünen not yazın (Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer). Notlar aramada da bulunur.
-- **Excel'e aktar (CSV):** Ayarlar'dan tüm dosyaları taraflar, vekiller ve notlarla birlikte Excel'de açılabilen dosya olarak indirir.
-- **UYAP duyuru penceresi:** UYAP girişte her seferinde çıkan duyuru penceresi varsayılan olarak gizlenir. Görmek isterseniz Ayarlar'dan işareti kaldırın. KVKK onay penceresine dokunulmaz.
+- **Not:** Kalem simgesiyle ya da mevcut notun üzerine tıklayarak (imleç tıklanan yerde) yazın; Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer. Notlar yalnız bu bilgisayarda tutulur, UYAP'taki notlarla ilgisi yoktur; aramada da bulunur.
+- **Aramalarda gösterme:** Göz simgesi dosyayı aramalardan çıkarır (ör. çok taraflı ve her aramada çıkan dosyalar). **Ayarlar → Veriler → Gizlenen dosyalar**'dan geri alınır.
+- **Yedekle / Yedekten yükle:** Ayarlar'dan dosya listesi, notlar, süre hatırlatmaları, duruşmalar ve ayarlar tek dosyaya yedeklenir; başka bilgisayarda yüklenince yeniden tarama gerekmez. Başka uygulamanın ya da desteklenmeyen biçimin dosyası kabul edilmez. Yedek müvekkil bilgisi içerir; güvenli saklayın.
+- **Vekil adlarınız:** Ayarlar'da etiket olarak eklenir ve çarpıyla çıkarılır; bu adların vekil olduğu taraflar **Müvekkil** olarak gösterilir.
+- **Excel'e aktar (CSV):** Ayarlar'dan tüm dosyaları taraflar, vekiller, son evrak, sonraki duruşma ve notlarla birlikte Excel'de açılabilen dosya olarak indirir.
+- **Sürüm:** Ayarlar'ın en altında (Hakkında) yazar.
+- **UYAP duyuru penceresi:** Varsayılan olarak UYAP'ın girişteki duyuru penceresine dokunulmaz (kesinti ve bakım duyurularını kaçırmamak için). İsterseniz **Ayarlar → UYAP**'tan gizleyebilirsiniz. KVKK onay penceresine hiçbir durumda dokunulmaz.
 - **Kısayol:** **Alt+Shift+D** eklentiyi açar. `chrome://extensions/shortcuts` adresinden değiştirebilirsiniz.
 
 ### Verileriniz

@@ -9,13 +9,14 @@
   if (window.__uhdLoaded) return;
   window.__uhdLoaded = true;
 
-  const { TURLER, norm, openPath, parseEvraklar, diffEvrak, sonEvrak, evrakKey, parseDurusma, uyapDate } = globalThis.UHD;
+  const { TURLER, norm, openPath, parseEvraklar, diffEvrak, sonEvrak, evrakKey, parseDurusma, uyapDate, evrakTakipAcik } = globalThis.UHD;
   const OWNER = Math.random().toString(36).slice(2);
   const DELAY = 150;
   const TARAF_V = 2; // 2: taraflarla birlikte vekiller de saklanır
   const EVRAK_PAGES = 20;   // bir dosyanın evrak listesinde en çok bu kadar sayfa okunur
   const YENI_MAX = 50;      // dosya başına saklanan görülmemiş yeni evrak sayısı
   const STALE_MS = 90000;
+  const ESZAMANLI = 3;      // taraf ve evrak adımlarında aynı anda en çok bu kadar istek (UYAP ekranları da paralel istek yapar)
   const DURUSMA_GUN = 60;   // güncellemede bugünden itibaren bu kadar günün duruşmaları alınır (30'ar günlük sorgularla)   // bu süre sinyal gelmezse güncellemeyi yürüten sekme gitmiş sayılır
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pad = n => String(n).padStart(2, '0');
@@ -127,6 +128,7 @@
     // Sekme yenilendiyse işi yürüten, bu sekmenin önceki hâliydi: sinyalin eskimesini beklemeden devral.
     const wasMine = pageLoad && p && p.owner && p.owner === ssGet(SS_OWNER);
     if (alive(p) && !wasMine) return;
+    if (j.paused === 'kullanici') return;   // kullanıcı durdurdu: yalnız "Sürdür" ile devam eder
     if (j.paused === 'oturum' && !pageLoad) return;
     if (!(await claim('Yarıda kalan güncelleme sürdürülüyor…'))) return;
     const { uhdJob: cur } = await chrome.storage.local.get('uhdJob');
@@ -261,6 +263,26 @@
     return list.length;
   }
 
+  // Öğeleri en çok n işçiyle işler; her işçi kendi içinde sırayla ve istekler arasında bekleyerek ilerler.
+  // Bir işçi hata verirse (durdurma, oturum düşmesi) diğerleri elindeki isteği bitirip durur; hata hepsi
+  // durduktan sonra atılır ki duraklatma kaydının üzerine sonradan ilerleme yazılmasın.
+  async function pool(items, n, fn) {
+    let next = 0, failed = null;
+    const worker = async () => {
+      while (!failed && next < items.length) {
+        try {
+          checkStop();
+          await fn(items[next++]);
+          await pace();
+        } catch (e) {
+          failed = failed || e;
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(n, items.length) }, worker));
+    if (failed) throw failed;
+  }
+
   async function saveJob(j) {
     const { uhdJob: cur } = await chrome.storage.local.get('uhdJob');
     if (cur && cur.id === j.id && !cur.stop) await chrome.storage.local.set({ uhdJob: j });
@@ -272,7 +294,7 @@
     let merged = null;
     try {
       const { uhdIndex, uhdPrefs } = await chrome.storage.local.get(['uhdIndex', 'uhdPrefs']);
-      const evrakTakip = !(uhdPrefs && uhdPrefs.evrakKapali);
+      const evrakTakip = evrakTakipAcik(uhdPrefs, uhdIndex && uhdIndex.records);
       const old = new Map(((uhdIndex && uhdIndex.records) || []).map(r => [r.key, r]));
 
       if (j.listDone) {
@@ -370,8 +392,7 @@
       const need = [...merged.values()].filter(r => j.full ? (r.tarafAt || 0) < startedAt : (!r.taraflar || r.tarafV !== TARAF_V));
       const phaseStart = Date.now();
       let done = 0, streak = 0;
-      for (const r of need) {
-        checkStop();
+      await pool(need, ESZAMANLI, async r => {
         try {
           r.taraflar = await fetchParties(r.dosyaId);
           r.tarafAt = Date.now();
@@ -385,18 +406,15 @@
         done++;
         if (done % 10 === 0) { await saveIndex(merged); await saveJob(j); }
         await setProgress({ running: true, phase: 'taraf', done, total: need.length, phaseStart, text: `Taraf bilgileri alınıyor: ${done}/${need.length}` });
-        await pace();
-      }
+      });
       await saveIndex(merged);
 
       // 4) Evrak takibi: yalnız açık ve bu işte listelenen dosyalar (dosyaId listelemeyle aynı oturumda geçerli).
       if (evrakTakip) {
         const eneed = [...merged.values()].filter(r => r.sorguDurum !== 1 && r.listJob === j.id && (r.evrakAt || 0) < startedAt);
         const ePhaseStart = Date.now();
-        let eDone = 0;
-        streak = 0;
-        for (const r of eneed) {
-          checkStop();
+        let eDone = 0, eStreak = 0;
+        await pool(eneed, ESZAMANLI, async r => {
           try {
             const { items, bad } = await fetchEvraklar(r.dosyaId);
             const { seen, yeni } = diffEvrak(r.evrakSeen, items);
@@ -408,17 +426,16 @@
               const at = Date.now();
               r.yeniEvrak = [...yeni.map(y => ({ ...y, at })), ...(r.yeniEvrak || [])].slice(0, YENI_MAX);
             }
-            streak = 0;
+            eStreak = 0;
           } catch (e) {
             if (e instanceof Fatal || e instanceof Stopped) throw e;
             st.evrakErrors++;
-            if (++streak >= 8) throw new Fatal('Evrak listeleri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
+            if (++eStreak >= 8) throw new Fatal('Evrak listeleri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
           }
           eDone++;
           if (eDone % 10 === 0) { await saveIndex(merged); await saveJob(j); }
           await setProgress({ running: true, phase: 'evrak', done: eDone, total: eneed.length, phaseStart: ePhaseStart, text: `Yeni evraklar kontrol ediliyor: ${eDone}/${eneed.length}` });
-          await pace();
-        }
+        });
         await saveIndex(merged);
       }
 
@@ -445,10 +462,11 @@
       if (e instanceof Stopped && e.message === 'lost') return;
       if (merged) await saveIndex(merged).catch(() => {});
       if (e instanceof Stopped) {
-        await chrome.storage.local.remove('uhdJob');
-        const text = merged ? 'Güncelleme durduruldu; o ana kadar alınan bilgiler saklandı.' : 'Güncelleme durduruldu; indeks değiştirilmedi.';
-        await setProgress({ running: false, text, endedAt: Date.now(), startedAt });
-        toast(text, '', 8000);
+        const { uhdJob: cur } = await chrome.storage.local.get('uhdJob');
+        if (cur && cur.id === j.id) await chrome.storage.local.set({ uhdJob: { ...j, stop: false, paused: 'kullanici' } });
+        const text = 'Güncelleme durduruldu; alınan bilgiler saklandı. “Sürdür” ile kaldığı yerden devam edebilir ya da “İptal et” ile bırakabilirsiniz.';
+        await setProgress({ running: false, paused: true, text, endedAt: Date.now(), startedAt });
+        toast('Güncelleme durduruldu; “Sürdür” ile kaldığı yerden devam edebilirsiniz.', '', 6000);
         return;
       }
       // Oturum düşmesi ve benzeri: iş saklanır; yeniden girişte (sayfa yüklenince) kaldığı yerden sürer.
@@ -700,8 +718,30 @@
     return all[all.length - 1] || null;
   }
 
+  // Dosya penceresinde istenen sekmeye (Evrak / Taraf bilgileri) geç; sekme yoksa hiçbir şeye basma.
+  async function gotoTab(rec) {
+    const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
+    const want = uhdPrefs && uhdPrefs.acilisSekme;
+    if (!want || want === 'yok') return;
+    const words = want === 'evrak' ? ['evrak'] : ['taraf bilgi', 'taraflar'];
+    const find = () => {
+      const pop = document.querySelector('.dosya-sorgula-popup .dx-overlay-content') ||
+        [...document.querySelectorAll('.dx-overlay-content')].find(e => visible(e) && e.innerText.includes(rec.dosyaNo));
+      if (!pop) return null;
+      return [...pop.querySelectorAll('[role="tab"], .dx-tab, .nav-link, .nav-item a, button')]
+        .find(e => visible(e) && e.innerText.trim().length < 40 && words.some(w => norm(e.innerText.trim()).startsWith(w))) || null;
+    };
+    try {
+      const tab = await waitFor(find, 5000, 'yok');
+      log('Sekmeye geçiliyor:', tab.innerText.trim());
+      tab.click();
+    } catch {
+      log('İstenen sekme bu dosyada yok; hiçbir şeye basılmadı.');
+    }
+  }
+
   async function openFile(rec, fresh) {
-    if (opening) { toast('Önceki dosya hâlâ açılıyor…', '', 3000); return; }
+    if (opening) { toast('Önceki dosya hâlâ açılıyor…', '', 3000); return false; }
     opening = true;
     hidePanel();
     const title = `${rec.dosyaNo} · ${rec.birimAdi}`;
@@ -713,7 +753,7 @@
         if (job || fresh) throw new Error('Dosya Sorgulama ekranı açılamadı.');
         await chrome.storage.local.set({ uhdPending: { record: rec, at: Date.now() } });
         location.assign(path);
-        return;
+        return false;
       }
       step(2, 'Form dolduruluyor…');
       await ensureForm(rec);
@@ -744,9 +784,12 @@
         return visible(pop) || [...document.querySelectorAll('.dx-overlay-content')].some(e => visible(e) && e.innerText.includes(rec.dosyaNo));
       }, 10000, 'Dosya penceresi açılmadı.');
       toast(`${rec.dosyaNo} açıldı.`, 'ok', 2500);
+      gotoTab(rec);
+      return true;
     } catch (e) {
       log('Dosya açılamadı:', e.message);
       toast(`${title}\nDosya açılamadı: ${e.message}`, 'err', 0, { label: 'Tekrar dene', fn: () => openFile(rec) });
+      return false;
     } finally {
       opening = false;
     }
@@ -948,7 +991,7 @@
   // UYAP girişte sessionStorage "showPopupDuyuru2" = "true" yapar; ana sayfa bu işaret "true" iken
   // duyuru penceresini gösterir. Penceredeki "Tekrar Gösterme" düğmesi yalnızca işareti "false" yapar;
   // aynısını girişte kendiliğinden yapıyoruz. (KVKK rıza penceresine dokunulmaz.)
-  let hideDuyuru = true;
+  let hideDuyuru = false;
   let duyuruQueued = false;
 
   function suppressDuyuru() {
@@ -971,11 +1014,11 @@
   }).observe(document.documentElement, { childList: true, subtree: true });
 
   chrome.storage.local.get('uhdPrefs').then(({ uhdPrefs }) => {
-    hideDuyuru = !(uhdPrefs && uhdPrefs.showDuyuru);
+    hideDuyuru = !!(uhdPrefs && uhdPrefs.duyuruGizle);
     suppressDuyuru();
   });
   chrome.storage.onChanged.addListener((ch, area) => {
-    if (area === 'local' && ch.uhdPrefs) hideDuyuru = !(ch.uhdPrefs.newValue && ch.uhdPrefs.newValue.showDuyuru);
+    if (area === 'local' && ch.uhdPrefs) hideDuyuru = !!(ch.uhdPrefs.newValue && ch.uhdPrefs.newValue.duyuruGizle);
   });
 
   // ---------------------------------------------------------------- Mesajlar
@@ -1046,11 +1089,36 @@
     });
   });
 
-  // Popup'tan gelen ve sayfa yenilemesi gerektiren açma isteği.
+  // Popup'tan gelen ve sayfa yenilemesi gerektiren açma isteği. UYAP açık değilken istendiyse giriş yapıldıktan sonra
+  // gelen ilk sayfada açılır; 3 dakika içinde açılamazsa bırakılır.
+  const PENDING_MS = 180000;
   chrome.storage.local.get('uhdPending').then(async ({ uhdPending: p }) => {
     if (!p) return;
+    if (Date.now() - p.at > PENDING_MS) return chrome.storage.local.remove('uhdPending');
+    await sleep(onFormPage() ? 0 : 1500);   // giriş sonrası ana sayfanın oturmasını bekle
+    const { uhdPending: cur } = await chrome.storage.local.get('uhdPending');
+    if (!cur || cur.at !== p.at) return;   // başka sekme üstlendi
     await chrome.storage.local.remove('uhdPending');
-    if (Date.now() - p.at > 120000 || !onFormPage()) return;
-    openFile(p.record, true);
+    const ok = await openFile(p.record, onFormPage());
+    // Giriş henüz tamamlanmadıysa bir sonraki sayfada bir kez daha denenir.
+    const tries = (p.tries || 0) + 1;
+    if (!ok && tries < 2 && Date.now() - p.at < PENDING_MS) {
+      const { uhdPending: again } = await chrome.storage.local.get('uhdPending');
+      if (!again) await chrome.storage.local.set({ uhdPending: { ...p, tries } });
+    }
   });
+
+  // Otomatik güncelleme (Ayarlar'dan açılırsa): UYAP sekmesi açıkken, son güncellemenin üzerinden seçilen süre geçtiyse.
+  const OTO_MS = { '6s': 6 * 3600000, gunluk: 24 * 3600000 };
+  async function autoUpdate() {
+    if (job || document.hidden) return;
+    const { uhdPrefs, uhdIndex, uhdProgress, uhdJob } = await chrome.storage.local.get(['uhdPrefs', 'uhdIndex', 'uhdProgress', 'uhdJob']);
+    const every = OTO_MS[uhdPrefs && uhdPrefs.otoGuncelle];
+    if (!every || !uhdIndex || !uhdIndex.updatedAt || uhdJob || alive(uhdProgress)) return;
+    if (Date.now() - uhdIndex.updatedAt < every) return;
+    log('Otomatik güncelleme başlıyor.');
+    startUpdate(false);
+  }
+  setTimeout(autoUpdate, 8000);
+  setInterval(autoUpdate, 10 * 60000);
 })();

@@ -34,6 +34,8 @@ NASIL ÇALIŞIR
 • Müvekkillerinizi otomatik tanır, ayrı gösterir; yalnız müvekkil adlarında arama
 • Duruşma takvimi: sonraki 60 günün duruşmaları dosya kartında ve günlere göre listede; bugünkü duruşma hatırlatması; takvime aktarma (.ics)
 • Evrakı açma: yeni ya da son evrakı tek tıkla UYAP'tan getirip görüntüleme
+• Kesintisiz güncelleme; durdurup kaldığı yerden sürdürme; isteğe bağlı otomatik güncelleme
+• Açık ve koyu tema, dosyayı aramalardan gizleme, yedekle / yedekten yükle
 • Süre hatırlatıcı: tebligat için süre ve son gün girin; yaklaşan süreler panelde ve UYAP açılışında hatırlatılır
 • Müvekkil kartı: bir taraf adına tıklayın, o kişinin tüm dosyaları ve rolleri tek ekranda
 • Karşı taraf vekiliyle arama
@@ -42,12 +44,12 @@ NASIL ÇALIŞIR
 • Künyeyi tek tıkla kopyalama ("… 2026/214 E.")
 • Son açılan dosyalar
 • Excel'e (CSV) aktarma
-• UYAP girişindeki duyuru penceresini gizleme (isteğe bağlı)
+• UYAP girişindeki duyuru penceresini gizleme (isteğe bağlı; varsayılan kapalı)
 • Klavyeyle kullanım: Alt+Shift+D ile açın, ↑↓ ile seçin, Enter ile açın
 
 GİZLİLİK
 • Sunucu yok, hesap yok. Verileriniz hiçbir sunucuya gönderilmez.
-• Yazarken UYAP'a istek gitmez; UYAP'tan veri yalnız "Güncelle"ye bastığınızda alınır.
+• Yazarken UYAP'a istek gitmez; UYAP'tan veri yalnız "Güncelle"ye bastığınızda (ya da açtıysanız otomatik güncellemede) alınır.
 • UYAP şifrenize ve e-imzanıza erişilmez. Evrak yalnız siz "Aç"a bastığınızda UYAP'tan alınıp ekranda gösterilir; saklanmaz.
 • Ayarlar → "Tüm verileri sil" ile her şey tek tıkla silinir.
 
