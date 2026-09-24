@@ -870,57 +870,84 @@
 
   const { el, mountUI, BRAND } = globalThis.UHD;
   const PAGE_CSS = `
+:host{--shell-bg:#fff;--shell-soft:#f5f7fb;--shell-text:#1d2939;--shell-muted:#667085;--shell-line:#e3e8f2;--shell-accent:${BRAND.primary};--shell-warn-bg:#fff4e5;--shell-warn-text:#7a4b00;--shell-error:#b42318}
+:host([data-theme=dark]){--shell-bg:#18222d;--shell-soft:#0f1720;--shell-text:#e6edf3;--shell-muted:#a8b5c3;--shell-line:#3a4756;--shell-accent:#7fd6cc;--shell-warn-bg:#33270f;--shell-warn-text:#f5c26b;--shell-error:#f97066;color-scheme:dark}
 .launch{position:fixed;right:0;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;background:${BRAND.primary};color:#fff;border:0;
-  border-radius:8px 0 0 8px;padding:12px 7px;font:600 12px "Segoe UI",system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.2);z-index:1}
-.launch:hover{padding-right:10px}
-.panel{position:fixed;top:0;right:0;height:100vh;width:min(480px,100vw);box-shadow:-8px 0 30px rgba(0,0,0,.2);z-index:2}
+  border-radius:12px 0 0 12px;padding:16px 10px;min-width:40px;min-height:104px;font:600 12px "Segoe UI",system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 16px rgba(16,75,73,.24);z-index:1;transition:background .15s,box-shadow .15s}
+.launch:hover{background:${BRAND.primaryDark};box-shadow:0 6px 20px rgba(16,75,73,.32)}
+.launch[aria-expanded=true]{visibility:hidden}
+.panel{position:fixed;top:0;right:0;height:100vh;height:100dvh;width:min(480px,100vw);box-shadow:-8px 0 36px rgba(0,0,0,.2);z-index:2;overscroll-behavior:contain}
+.panel .panel-pin{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;padding:7px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer}
+.panel .panel-pin svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.panel .panel-pin:hover,.panel .panel-pin[aria-pressed=true]{background:var(--soft);border-color:var(--bord);color:var(--accent-text)}
+.panel .panel-pin:disabled{opacity:.55;cursor:wait}
+.launch:focus-visible,.toast button:focus-visible,.viewer :is(button,a):focus-visible{outline:3px solid ${BRAND.focus};outline-offset:3px}
 .toast{position:fixed;right:16px;bottom:16px;max-width:440px;background:#1d2939;color:#fff;padding:10px 12px 10px 14px;border-radius:10px;
-  font:13px/1.45 "Segoe UI",system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:3;display:flex;gap:10px;align-items:flex-start}
-.toast .msg{white-space:pre-line;flex:1}
+  width:max-content;max-width:min(440px,calc(100vw - 32px));box-sizing:border-box;font:13px/1.45 "Segoe UI",system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:3;display:flex;gap:10px;align-items:center}
+.toast .msg{white-space:pre-line;flex:1;min-width:0;overflow-wrap:anywhere}
 .toast.busy .msg::before{content:"";display:inline-block;width:10px;height:10px;margin-right:7px;border:2px solid rgba(255,255,255,.35);
   border-top-color:#fff;border-radius:50%;animation:uhdspin .8s linear infinite;vertical-align:-1px}
 @keyframes uhdspin{to{transform:rotate(360deg)}}
-.toast button{flex:none;border:1px solid rgba(255,255,255,.6);background:none;color:#fff;border-radius:6px;padding:3px 9px;font:inherit;font-size:12px;cursor:pointer}
-.toast button.close{border:0;font-size:18px;line-height:1;padding:0 2px;opacity:.8}
+.toast button{flex:none;min-height:32px;border:1px solid rgba(255,255,255,.6);background:none;color:#fff;border-radius:7px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+.toast button:hover{background:rgba(255,255,255,.12)}
+.toast button.close{border:0;font-size:20px;line-height:1;min-width:32px;padding:4px;opacity:.9}
 .toast.err{background:#8a1f17}.toast.ok{background:#12805c}
-.panel:not([hidden]) ~ .toast{right:calc(min(480px,100vw) + 16px)}
+.panel:not([hidden]) ~ .toast{right:496px;max-width:min(440px,calc(100vw - 512px))}
+@media(max-width:800px){.panel:not([hidden]) ~ .toast{right:12px;bottom:80px;max-width:calc(100vw - 24px)}.toast{right:12px;bottom:12px;max-width:calc(100vw - 24px)}}
+@media(prefers-reduced-motion:reduce){.launch{transition:none}.toast.busy .msg::before{animation:none}}
 .viewer{position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:4;display:flex;align-items:center;justify-content:center}
-.viewer .box{background:#fff;width:min(1000px,96vw);height:92vh;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35);font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#1d2939}
-.viewer .bar{display:flex;gap:10px;align-items:center;padding:10px 12px;background:${BRAND.primary};color:#fff}
+.viewer .box{background:var(--shell-bg);width:min(1000px,96vw);height:92vh;height:92dvh;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35);font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:var(--shell-text)}
+.viewer .bar{display:flex;gap:10px;align-items:center;padding:10px 12px;background:${BRAND.primary};color:#fff;flex-wrap:wrap}
 .viewer .bar b{flex:1;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.viewer .bar a,.viewer .bar button{color:#fff;border:1px solid rgba(255,255,255,.6);background:none;border-radius:6px;padding:4px 10px;font:inherit;cursor:pointer;text-decoration:none}
+.viewer .bar a,.viewer .bar button{color:#fff;border:1px solid rgba(255,255,255,.6);background:none;border-radius:6px;padding:8px 10px;font:inherit;cursor:pointer;text-decoration:none}
 .viewer iframe{flex:1;border:0;width:100%}
-.viewer .msg{padding:28px;color:#344054}
-.viewer .dp-tabs{display:flex;gap:4px;padding:8px 12px 0;border-bottom:1px solid #e3e8f2;background:#f5f7fb}
-.viewer .dp-tab{border:1px solid transparent;border-bottom:0;background:none;border-radius:8px 8px 0 0;padding:6px 12px;font:inherit;cursor:pointer;color:#344054}
-.viewer .dp-tab.on{background:#fff;border-color:#e3e8f2;color:${BRAND.primary};font-weight:600;margin-bottom:-1px}
-.viewer .dp-body{flex:1;overflow:auto;padding:12px 14px;background:#fff}
-.viewer .dp-muted{color:#667085;font-size:12px;margin:6px 0}
-.viewer .dp-err{color:#b42318;margin:6px 0}
-.viewer .dp-warn{padding:8px 10px;border-radius:8px;background:#fff4e5;color:#7a4b00;font-size:12px;margin-bottom:8px}
-.viewer .dp-bakiye{font-size:12px;color:#344054;margin-bottom:8px}
+.viewer .msg{padding:28px;color:var(--shell-text)}
+.viewer .dp-tabs{display:flex;gap:4px;padding:8px 12px 0;border-bottom:1px solid var(--shell-line);background:var(--shell-soft)}
+.viewer .dp-tab{border:1px solid transparent;border-bottom:0;background:none;border-radius:8px 8px 0 0;padding:8px 12px;font:inherit;cursor:pointer;color:var(--shell-text)}
+.viewer .dp-tab.on{background:var(--shell-bg);border-color:var(--shell-line);color:var(--shell-accent);font-weight:600;margin-bottom:-1px}
+.viewer .dp-body{flex:1;overflow:auto;overscroll-behavior:contain;padding:12px 14px;background:var(--shell-bg)}
+.viewer .dp-muted{color:var(--shell-muted);font-size:12px;margin:6px 0}
+.viewer .dp-err{color:var(--shell-error);margin:6px 0}
+.viewer .dp-warn{padding:8px 10px;border-radius:8px;background:var(--shell-warn-bg);color:var(--shell-warn-text);font-size:12px;margin-bottom:8px}
+.viewer .dp-bakiye{font-size:12px;color:var(--shell-text);margin-bottom:8px}
 .viewer .dp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
-.viewer .dp-card{border:1px solid #e3e8f2;border-radius:10px;padding:10px 12px}
+.viewer .dp-card{border:1px solid var(--shell-line);border-radius:10px;padding:10px 12px}
 .viewer .dp-card h4,.viewer .dp-res h4{margin:0 0 6px;font-size:13px}
 .viewer .dp-card div{margin:2px 0}
-.viewer .dp-k{color:#667085}
+.viewer .dp-k{color:var(--shell-muted)}
 .viewer .dp-strong{font-weight:700}
 .viewer .dp-check{display:flex;gap:6px;align-items:center;margin:3px 0;cursor:pointer}
 .viewer .dp-actions{margin:10px 0}
 .viewer .dp-go{border:0;background:${BRAND.primary};color:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
 .viewer .dp-go:disabled{opacity:.5;cursor:default}
-.viewer .dp-res{border-top:1px solid #e3e8f2;padding:8px 0}
+.viewer .dp-res{border-top:1px solid var(--shell-line);padding:8px 0}
 .viewer .dp-tablewrap{overflow:auto;max-width:100%}
 .viewer .dp-table{border-collapse:collapse;font-size:12px;width:100%}
-.viewer .dp-table th,.viewer .dp-table td{border:1px solid #e3e8f2;padding:4px 6px;text-align:left;vertical-align:top}
-.viewer .dp-table th{background:#f5f7fb;font-weight:600}
+.viewer .dp-table th,.viewer .dp-table td{border:1px solid var(--shell-line);padding:4px 6px;text-align:left;vertical-align:top}
+.viewer .dp-table th{background:var(--shell-soft);font-weight:600}
 .viewer .dp-table td.nw{white-space:nowrap}
 .viewer .dp-kv div{margin:2px 0}
-.viewer .dp-sub{margin:6px 0;padding-left:8px;border-left:2px solid #e3e8f2}
+.viewer .dp-sub{margin:6px 0;padding-left:8px;border-left:2px solid var(--shell-line)}
 .viewer .dp-more{margin-top:10px;font-size:12px}
 [hidden]{display:none!important}
 `;
-  let panel, ui, toastEl, toastTimer, shadowRoot;
+  let panel, ui, launch, pinButton, toastEl, toastTimer, shadowRoot, focusBeforePanel;
+  let pagePrefs = {}, toastRemaining = 0, toastStarted = 0;
+  const pageDarkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  function applyPagePrefs(prefs) {
+    pagePrefs = prefs || {};
+    if (toastEl && pagePrefs.durusmaBildirim === false && toastEl.dataset.source === 'durusma') dismissToast();
+    const theme = pagePrefs.tema || 'auto';
+    if (shadowRoot) shadowRoot.host.dataset.theme = theme === 'auto' ? (pageDarkMq && pageDarkMq.matches ? 'dark' : 'light') : theme;
+    if (pinButton) {
+      const pinned = !!pagePrefs.panelSabit;
+      const label = pinned ? 'Panel sabit. Sabitlemeyi kaldır' : 'Paneli sabitle: UYAP’a tıklayınca açık kalsın';
+      pinButton.setAttribute('aria-pressed', String(pinned));
+      pinButton.setAttribute('aria-label', label);
+      pinButton.title = label;
+    }
+  }
 
   function mountPage() {
     const host = document.createElement('div');
@@ -928,9 +955,9 @@
     host.style.cssText = 'all:initial;position:fixed;top:0;left:0;width:0;height:0;z-index:2147483646';
     document.documentElement.append(host);
     const shadow = host.attachShadow({ mode: 'closed' }); // UYAP sayfasındaki betikler panel içeriğini okuyamaz
-    const launch = el('button', { class: 'launch', title: BRAND.name + ' (yerel arama)' }, 'Dosya Ara');
-    panel = el('div', { class: 'panel', hidden: true });
-    toastEl = el('div', { class: 'toast', hidden: true });
+    launch = el('button', { class: 'launch', type: 'button', title: BRAND.name + ' · Dosyalarınızda ara', 'aria-label': BRAND.name + ' panelini aç', 'aria-expanded': 'false', 'aria-controls': 'legaluga-search-panel' }, 'Dosya Ara');
+    panel = el('div', { class: 'panel', id: 'legaluga-search-panel', role: 'dialog', 'aria-label': BRAND.name, 'aria-modal': 'false', hidden: true });
+    toastEl = el('div', { class: 'toast', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', hidden: true });
     shadow.append(el('style', null, PAGE_CSS), launch, panel, toastEl);
     shadowRoot = shadow;
     ui = mountUI(panel, {
@@ -943,19 +970,79 @@
         if (!res.ok) ui.setNotice(res.error, 'err');
       },
       onStop: () => stopUpdate(),
-      onClose: hidePanel
+      onClose: () => hidePanel(true)
     });
+    pinButton = el('button', { class: 'panel-pin', type: 'button', 'aria-pressed': 'false' });
+    const pinIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    pinIcon.setAttribute('viewBox', '0 0 24 24');
+    pinIcon.setAttribute('aria-hidden', 'true');
+    const pinPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pinPath.setAttribute('d', 'M16 3 21 8 17 9 13 13 12 17 7 12 11 11 15 7Z M7 17 3 21');
+    pinIcon.append(pinPath);
+    pinButton.append(pinIcon);
+    const header = ui.root.querySelector('header');
+    if (header) header.insertBefore(pinButton, header.querySelector('.x'));
+    pinButton.addEventListener('click', async () => {
+      pinButton.disabled = true;
+      try {
+        const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
+        const next = { ...(uhdPrefs || {}), panelSabit: !pagePrefs.panelSabit };
+        await chrome.storage.local.set({ uhdPrefs: next });
+        applyPagePrefs(next);
+      } catch (error) {
+        if (invalidated(error)) stopInvalidatedContext();
+        else toast('Panel tercihi kaydedilemedi. Tekrar deneyin.', 'err', 5000);
+      } finally { pinButton.disabled = false; }
+    });
+    applyPagePrefs(pagePrefs);
+    chrome.storage.local.get('uhdPrefs').then(v => applyPagePrefs(v.uhdPrefs)).catch(error => {
+      if (invalidated(error)) stopInvalidatedContext();
+    });
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.uhdPrefs) applyPagePrefs(changes.uhdPrefs.newValue);
+    });
+    if (pageDarkMq && pageDarkMq.addEventListener) pageDarkMq.addEventListener('change', () => applyPagePrefs(pagePrefs));
     launch.addEventListener('click', () => {
-      panel.hidden = !panel.hidden;
-      if (!panel.hidden) ui.focus();
+      if (panel.hidden) showPanel();
+      else hidePanel(true);
+    });
+    panel.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        e.preventDefault();
+        e.stopPropagation();
+        hidePanel(true);
+      }
     });
     // Panel dışına tıklanınca kapat (gölge DOM içindeki tıklamaların hedefi host olarak görünür).
     document.addEventListener('mousedown', e => {
-      if (!panel.hidden && e.target !== host) hidePanel();
+      if (!panel.hidden && !pagePrefs.panelSabit && e.target !== host) hidePanel();
     }, true);
+    toastEl.addEventListener('mouseenter', pauseToast);
+    toastEl.addEventListener('mouseleave', resumeToast);
+    toastEl.addEventListener('focusin', pauseToast);
+    toastEl.addEventListener('focusout', e => { if (!toastEl.contains(e.relatedTarget)) resumeToast(); });
   }
 
-  function hidePanel() { if (panel) panel.hidden = true; }
+  function showPanel() {
+    if (!panel) return;
+    if (panel.hidden) focusBeforePanel = document.activeElement;
+    panel.hidden = false;
+    launch.setAttribute('aria-expanded', 'true');
+    launch.setAttribute('aria-label', BRAND.name + ' panelini kapat');
+    ui.focus();
+  }
+
+  function hidePanel(restoreFocus = false) {
+    if (!panel || panel.hidden) return;
+    panel.hidden = true;
+    launch.setAttribute('aria-expanded', 'false');
+    launch.setAttribute('aria-label', BRAND.name + ' panelini aç');
+    if (restoreFocus) {
+      const previous = focusBeforePanel;
+      const target = previous && previous !== shadowRoot.host && previous !== document.body && previous.isConnected ? previous : launch;
+      target.focus({ preventScroll: true });
+    }
+  }
 
   // ---------------------------------------------------------------- Evrakı açma
   // Evrak kimlikleri her yanıtta yeniden şifrelendiği için saklanmaz: açarken dosyanın evrak listesi yeniden
@@ -1082,8 +1169,33 @@
   }
 
   let dosyaPanel = null;
+  function viewerKeys(ev, box, done) {
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      ev.stopPropagation();
+      done();
+    } else if (ev.key === 'Tab') {
+      const targets = [...box.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),iframe,[tabindex="0"]')].filter(visible);
+      if (!targets.length) return;
+      const active = shadowRoot.activeElement;
+      const next = ev.shiftKey ? targets[targets.length - 1] : targets[0];
+      if (!box.contains(active) || (ev.shiftKey ? active === targets[0] : active === targets[targets.length - 1])) {
+        ev.preventDefault();
+        next.focus();
+      }
+    }
+  }
+
+  function restoreAfterViewer(wasPanelOpen, previous) {
+    if (wasPanelOpen) showPanel();
+    const target = previous && previous.isConnected && visible(previous) ? previous : launch;
+    target.focus({ preventScroll: true });
+  }
+
   function openDosyaPanel(rec, tab) {
     if (dosyaPanel) dosyaPanel.close();
+    const wasPanelOpen = !panel.hidden;
+    const previous = shadowRoot.activeElement || document.activeElement;
     hidePanel();
     const icra = rec.yargiTuru === '2';
     const tabs = [icra && ['ozet', 'Özet'], icra && ['sorgu', 'Borçlu sorgusu'], ['safahat', 'Safahat']].filter(Boolean);
@@ -1091,11 +1203,11 @@
     const body = el('div', { class: 'dp-body' });
     const tabBar = el('div', { class: 'dp-tabs' });
     const close = el('button', { title: 'Kapat (Esc)' }, 'Kapat');
-    const box = el('div', { class: 'box', role: 'dialog', 'aria-label': 'Dosya paneli' },
+    const box = el('div', { class: 'box', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Dosya paneli' },
       el('div', { class: 'bar' }, el('b', null, `${rec.dosyaNo} · ${rec.birimAdi}`), close), tabBar, body);
     const viewer = el('div', { class: 'viewer' }, box);
-    const onKey = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); done(); } };
-    const done = () => { viewer.remove(); document.removeEventListener('keydown', onKey, true); dosyaPanel = null; };
+    const onKey = ev => viewerKeys(ev, box, done);
+    const done = () => { viewer.remove(); document.removeEventListener('keydown', onKey, true); dosyaPanel = null; restoreAfterViewer(wasPanelOpen, previous); };
     close.addEventListener('click', done);
     viewer.addEventListener('click', ev => { if (ev.target === viewer) done(); });
     document.addEventListener('keydown', onKey, true);
@@ -1115,6 +1227,7 @@
     dosyaPanel = { close: done };
     shadowRoot.append(viewer);
     show(active);
+    close.focus();
   }
 
   async function loadSafahat(rec, body) {
@@ -1223,12 +1336,14 @@
   }
 
   function showViewer(rec, e, doc) {
+    const wasPanelOpen = !panel.hidden;
+    const previous = shadowRoot.activeElement || document.activeElement;
     const url = URL.createObjectURL(doc.blob);
     const pdf = doc.type.includes('pdf');
     const ext = pdf ? 'pdf' : doc.type.includes('tif') ? 'tif' : doc.type.includes('udf') ? 'udf' : 'bin';
     const name = `${rec.dosyaNo} ${e.tur || 'evrak'} ${String(e.onaylandigiTarih || '').slice(0, 10)}`.replace(/[\\/:*?"<>|]+/g, '-') + '.' + ext;
     const close = el('button', { title: 'Kapat (Esc)' }, 'Kapat');
-    const box = el('div', { class: 'box', role: 'dialog', 'aria-label': 'Evrak' },
+    const box = el('div', { class: 'box', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Evrak' },
       el('div', { class: 'bar' },
         el('b', null, `${e.tur || 'Evrak'} · ${e.onaylandigiTarih || ''} · ${rec.dosyaNo}`),
         pdf ? el('a', { href: url, target: '_blank', rel: 'noopener' }, 'Yeni sekmede aç') : null,
@@ -1241,30 +1356,60 @@
       viewer.remove();
       document.removeEventListener('keydown', onKey, true);
       setTimeout(() => URL.revokeObjectURL(url), 60000);   // yeni sekmede açıldıysa yüklenmesine zaman tanı
+      restoreAfterViewer(wasPanelOpen, previous);
     };
-    const onKey = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); done(); } };
+    const onKey = ev => viewerKeys(ev, box, done);
     close.addEventListener('click', done);
     viewer.addEventListener('click', ev => { if (ev.target === viewer) done(); });
     document.addEventListener('keydown', onKey, true);
     hidePanel();
     shadowRoot.append(viewer);
+    close.focus();
+  }
+
+  function dismissToast() {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    toastRemaining = 0;
+    if (toastEl) toastEl.hidden = true;
+  }
+
+  function pauseToast() {
+    if (!toastTimer) return;
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    toastRemaining = Math.max(1, toastRemaining - (Date.now() - toastStarted));
+  }
+
+  function resumeToast() {
+    if (!toastEl || toastEl.hidden || !toastRemaining || toastTimer || toastEl.matches(':hover') || toastEl.contains(shadowRoot.activeElement)) return;
+    toastStarted = Date.now();
+    toastTimer = setTimeout(dismissToast, toastRemaining);
   }
 
   function toast(text, kind, ms, action) {
     if (!toastEl) return;
-    clearTimeout(toastTimer);
-    const close = el('button', { class: 'close', title: 'Kapat' }, '×');
-    close.addEventListener('click', () => { toastEl.hidden = true; });
+    dismissToast();
+    const close = el('button', { class: 'close', type: 'button', title: 'Bildirimi kapat', 'aria-label': 'Bildirimi kapat' }, '×');
+    close.addEventListener('click', () => {
+      dismissToast();
+      if (panel.hidden) launch.focus({ preventScroll: true });
+      else ui.focus();
+    });
     toastEl.replaceChildren(el('div', { class: 'msg' }, text));
     if (action) {
-      const b = el('button', null, action.label);
-      b.addEventListener('click', () => { toastEl.hidden = true; action.fn(); });
+      const b = el('button', { type: 'button' }, action.label);
+      b.addEventListener('click', () => { dismissToast(); action.fn(); });
       toastEl.append(b);
     }
     if (kind !== 'busy') toastEl.append(close);
     toastEl.className = 'toast' + (kind ? ' ' + kind : '');
+    toastEl.dataset.source = action && action.source || '';
+    toastEl.setAttribute('role', kind === 'err' ? 'alert' : 'status');
+    toastEl.setAttribute('aria-live', kind === 'err' ? 'assertive' : 'polite');
     toastEl.hidden = false;
-    if (ms) toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
+    toastRemaining = ms || 0;
+    resumeToast();
   }
 
   // ---------------------------------------------------------------- Açılış duyurusu
@@ -1353,15 +1498,16 @@
   setTimeout(() => scheduled(() => maybeResume(true)), 1500);
 
   // UYAP açılınca bu sekmede günde bir kez bugünkü duruşmaları göster.
-  chrome.storage.local.get('uhdDurusmalar').then(({ uhdDurusmalar }) => {
+  chrome.storage.local.get(['uhdDurusmalar', 'uhdPrefs']).then(({ uhdDurusmalar, uhdPrefs }) => {
     const { todayIso, upcomingDurusmalar } = globalThis.UHD;
+    if (uhdPrefs && uhdPrefs.durusmaBildirim === false) return;
     if (ssGet('legalugaHatirlatma') === todayIso()) return;
     const bugun = upcomingDurusmalar(uhdDurusmalar && uhdDurusmalar.list).filter(d => d.tarih === todayIso());
     if (!bugun.length) return;
     ssSet('legalugaHatirlatma', todayIso());
     const text = `Bugün ${bugun.length} duruşma: ` + bugun.slice(0, 3).map(d => `${d.saat} ${d.dosyaNo}`).join(', ') + (bugun.length > 3 ? ' …' : '');
-    toast(text, 'ok', 0, {
-      label: 'Göster', fn: () => { panel.hidden = false; ui.showDurusmalar(); }
+    toast(text, 'ok', 8000, {
+      source: 'durusma', label: 'Duruşmaları aç', fn: () => { showPanel(); ui.showDurusmalar(); }
     });
   });
 

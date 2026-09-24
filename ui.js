@@ -11,13 +11,14 @@
 
   const CSS = `
 .uhd{--navy:${BRAND.primary};--navy2:${BRAND.primaryDark};--deep:${BRAND.deep};--soft:${BRAND.soft};--bord:${BRAND.border};--focus:${BRAND.focus};
+  --shadow:0 2px 8px #182b4010;--accent-text:#0b6663;
   --bg:#f5f7fb;--card:#fff;--text:#1d2939;--text2:#344054;--muted:#667085;--line:#e3e8f2;--line2:#cfd6e4;
   --green:#12805c;--green-bg:#e7f6ef;--grey:#98a2b3;--grey-bg:#eef0f3;--amber:#b54708;--amber-bg:#fef0c7;--red:#b42318;
   --note-bg:#fffbea;--note-bd:#f2c94c;--ev-bg:#f0f5ff;--ev-bd:#528bff;--ev-tx:#1849a9;--warn-bg:#fff4e5;--warn-tx:#7a4b00;
   --err-bg:#fdecea;--err-tx:#8a1f17;--mark:#ffe58a;
-  font:13px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg);
+  font:13px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg);
   display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;color-scheme:light}
-.uhd[data-theme=dark]{--soft:#143532;--bord:#2f6f69;
+.uhd[data-theme=dark]{--soft:#173d39;--bord:#428d83;--shadow:0 2px 8px #0002;--accent-text:#8ae0d2;
   --bg:#0f1720;--card:#18222d;--text:#e6edf3;--text2:#c9d3de;--muted:#98a2b3;--line:#2a3644;--line2:#3a4756;
   --green:#4fd1a5;--green-bg:#0f2e25;--grey:#667085;--grey-bg:#25303c;--amber:#f5b04c;--amber-bg:#33260f;--red:#f97066;
   --note-bg:#2b2716;--note-bd:#b38f1f;--ev-bg:#16233a;--ev-bd:#528bff;--ev-tx:#9ec1ff;--warn-bg:#33270f;--warn-tx:#f5c26b;
@@ -28,22 +29,33 @@
 .uhd :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .uhd button{font:inherit;color:inherit}
 .uhd svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.uhd header{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;background:var(--navy);color:#fff}
-.uhd header strong{font-size:14px;font-weight:600;flex:1}
-.uhd .count{font-size:12px;opacity:.8}
-.uhd .x{background:none;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 2px}
-.uhd .search{position:relative;padding:0 12px 10px;background:var(--navy)}
-.uhd .q{width:100%;border:0;border-radius:8px;padding:10px 70px 10px 12px;font:inherit;font-size:14px;outline:none;background:var(--card);color:var(--text)}
+.uhd header{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--card);color:var(--text)}
+.uhd header strong{font-size:14px;font-weight:700;flex:1;letter-spacing:-.2px}
+.uhd .brand-mark{display:grid;place-items:center;width:30px;height:30px;flex:none;border-radius:9px;background:var(--navy);color:#fff;font-size:17px;font-weight:800}
+.uhd .count{font-size:11px;color:var(--muted);white-space:nowrap}
+.uhd .x{background:none;border:0;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;width:32px;height:32px;border-radius:8px}
+.uhd .x:hover{background:var(--grey-bg)}
+.uhd .search{position:relative;padding:0 14px 10px;background:var(--card)}
+.uhd .q{width:100%;border:1px solid var(--line2);border-radius:10px;padding:10px 72px 10px 13px;font:inherit;font-size:14px;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s,box-shadow .15s}
 .uhd .q::-webkit-search-cancel-button{display:none}
-.uhd .q:focus{box-shadow:0 0 0 3px rgba(255,255,255,.4)}
-.uhd .sbtn{position:absolute;top:4px;width:32px;height:32px;border:0;background:none;border-radius:6px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.uhd .q:focus{border-color:var(--focus);box-shadow:0 0 0 3px var(--soft)}
+.uhd .q::placeholder{color:var(--muted);opacity:1}
+.uhd .sbtn{position:absolute;top:5px;width:32px;height:32px;border:0;background:none;border-radius:6px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .uhd .sbtn:hover{background:var(--grey-bg);color:var(--text)}
 .uhd .sbtn.clear{right:52px}
 .uhd .sbtn.help{right:18px}
-.uhd .filters{display:flex;flex-direction:column;gap:5px;padding:8px 10px 2px}
+.uhd .views{display:flex;gap:4px;padding:0 14px 8px;background:var(--card);border-bottom:1px solid var(--line)}
+.uhd .view{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:6px;border:0;border-radius:8px;color:var(--muted);background:none;font-weight:600;cursor:pointer;font-size:12px}
+.uhd .view:hover{background:var(--bg);color:var(--text)}
+.uhd .view.on{background:var(--soft);color:var(--accent-text)}
+.uhd .view small{font-size:10px;padding:0 5px;border-radius:5px;background:var(--bg);color:var(--muted)}
+.uhd .filters{display:flex;flex-direction:column;gap:8px;padding:8px 14px 0}
+.uhd .filter-top{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.uhd .filter-summary{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.uhd .filter-body{display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:10px}
 .uhd .frow{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .uhd .frow .lbl{font-size:11px;color:var(--muted);margin-right:2px}
-.uhd .chip{border:1px solid var(--line2);background:var(--card);color:var(--text2);border-radius:14px;padding:2px 10px;font-size:12px;cursor:pointer}
+.uhd .chip{border:1px solid var(--line2);background:var(--card);color:var(--text2);border-radius:7px;min-height:30px;padding:4px 10px;font-size:12px;cursor:pointer}
 .uhd .chip:hover{border-color:var(--focus)}
 .uhd .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .uhd .chip.client.on{background:var(--deep);border-color:var(--deep)}
@@ -53,13 +65,21 @@
 .uhd .sep{width:1px;height:16px;background:var(--line2);margin:0 2px}
 .uhd .notice{margin:8px 10px 0;padding:8px 10px;border-radius:8px;background:var(--warn-bg);color:var(--warn-tx);font-size:12px;display:flex;gap:8px;align-items:center}
 .uhd .notice.err{background:var(--err-bg);color:var(--err-tx)}
-.uhd .notice button{margin-left:auto;flex:none;border:1px solid currentColor;background:none;border-radius:6px;padding:3px 8px;cursor:pointer}
-.uhd .results{flex:1;min-height:0;overflow:auto;padding:8px}
+.uhd .notice>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.uhd .notice button{flex:none;border:1px solid currentColor;background:none;color:inherit;border-radius:6px;min-height:30px;padding:3px 8px;cursor:pointer}
+.uhd .notice .dismiss{border:0;font-size:18px;padding:0 6px}
+.uhd .results{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:10px 12px}
 .uhd .empty{padding:32px 16px;text-align:center;color:var(--muted)}
 .uhd .empty .btn{margin-top:10px}
 .uhd .more{padding:6px 10px 10px;text-align:center;font-size:12px;color:var(--muted)}
-.uhd .section{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 4px 6px;font-size:11px;color:var(--muted)}
-.uhd .section b{font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.uhd .section{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 2px 10px;font-size:12px;color:var(--muted)}
+.uhd .section b{font-weight:600;color:var(--text2)}
+.uhd .sort{max-width:180px;min-height:30px;padding:4px 6px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:11px;color:var(--text2);background:var(--card)}
+.uhd .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.uhd .empty strong{display:block;color:var(--text);font-size:15px;margin-bottom:6px}
+.uhd .empty p{margin:4px 0 12px}
+.uhd .quick-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.uhd .load-more{width:100%;justify-content:center;margin:6px 0}
 .uhd .onboard{margin:14px 6px;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:12px}
 .uhd .onboard b{display:block;font-size:14px;color:var(--navy);margin-bottom:6px}
 .uhd .onboard ol{margin:0 0 14px;padding-left:20px;color:var(--text2)}
@@ -69,18 +89,19 @@
 .uhd .btn.primary{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
 .uhd .btn.primary:hover{background:var(--navy2)}
 .uhd .btn.danger{border-color:#e5b3ae;color:var(--red)}
-.uhd .btn.sm{padding:3px 8px;font-size:12px;border-radius:6px}
-.uhd .ib{width:28px;height:28px;border:0;background:none;border-radius:6px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.uhd .btn.sm{padding:5px 9px;min-height:30px;font-size:12px;border-radius:7px}
+.uhd .ib{width:32px;height:32px;border:0;background:none;border-radius:8px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none}
 .uhd .ib:hover{background:var(--soft);color:var(--navy)}
 .uhd .ib.on{color:var(--navy)}
 .uhd .ib.done{color:var(--green)}
-.uhd .item{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--st,var(--green));border-radius:10px;padding:8px 8px 7px 11px;margin-bottom:6px;cursor:pointer}
+.uhd .item{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--st,var(--green));border-radius:12px;padding:11px 10px 10px 12px;margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow)}
 .uhd .item.closed{--st:var(--grey)}
 .uhd .item.karar{--st:var(--amber)}
 .uhd .item:hover{border-color:var(--bord);border-left-color:var(--st,var(--green))}
-.uhd .item.sel{background:var(--soft);box-shadow:0 0 0 1px var(--focus) inset}
+.uhd .item.sel{border-color:var(--focus);border-left-color:var(--st,var(--green));box-shadow:0 0 0 1px var(--focus)}
 .uhd .ihead{display:flex;align-items:flex-start;gap:6px}
-.uhd .ititle{flex:1;min-width:0;padding-top:4px;font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35}
+.uhd .ititle{flex:1;min-width:0;padding-top:2px;font-size:13px;font-weight:600;color:var(--text);line-height:1.45;overflow-wrap:anywhere}
+.uhd .file-number{display:block;font-size:17px;font-weight:750;letter-spacing:-.3px;color:var(--accent-text);margin-bottom:3px}
 .uhd .ititle .dot{color:var(--muted);font-weight:400;margin:0 4px}
 .uhd .pill{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;margin-left:6px;vertical-align:1px;white-space:nowrap}
 .uhd .pill.new{background:var(--ev-bg);color:var(--ev-tx)}
@@ -122,7 +143,7 @@
 .uhd .evrak ul{margin:3px 0 0;padding:0;list-style:none}
 .uhd .evrak li{margin:3px 0;color:var(--text2)}
 .uhd .evrak li small{color:var(--muted)}
-.uhd .lnk{border:1px solid var(--line2);background:var(--card);color:var(--text2);border-radius:5px;padding:0 6px;font-size:11px;cursor:pointer;margin-left:4px;vertical-align:1px}
+.uhd .lnk{border:1px solid var(--line2);background:var(--card);color:var(--text2);border-radius:5px;padding:3px 7px;min-height:26px;font-size:11px;cursor:pointer;margin-left:4px;vertical-align:1px}
 .uhd .lnk:hover{border-color:var(--focus);color:var(--navy)}
 .uhd .person,.uhd .durhead{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--text2)}
 .uhd .person .top{display:flex;align-items:center;gap:8px}
@@ -146,6 +167,7 @@
 .uhd .settings .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .uhd .settings .top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .uhd .settings .top b{flex:1;font-size:14px}
+.uhd .settings .top{position:sticky;top:-10px;background:var(--bg);z-index:1;padding:10px 0}
 .uhd .settings label.check{display:flex;gap:8px;align-items:flex-start;margin:6px 0;cursor:pointer}
 .uhd .settings label.check input{margin:2px 0 0}
 .uhd .settings .field{display:flex;align-items:center;gap:8px;margin:6px 0}
@@ -164,10 +186,16 @@
 .uhd .status.err{color:var(--red)}
 .uhd .bar{height:4px;background:var(--line);border-radius:2px;margin-top:5px;overflow:hidden}
 .uhd .bar i{display:block;height:100%;width:0;background:var(--navy);transition:width .3s}
-.uhd footer{display:flex;gap:6px;padding:6px 10px 8px;background:var(--card);align-items:center}
+.uhd footer{display:flex;gap:6px;padding:8px 10px;background:var(--card);align-items:center;border-top:1px solid var(--line)}
 .uhd footer .stx{flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uhd footer .stx.err{color:var(--red)}
 .uhd button:disabled{opacity:.5;cursor:default}
+.uhd :is(.client,.parties,.durrow .info){overflow-wrap:anywhere;min-width:0}
+.uhd a{color:var(--accent-text)}
+.uhd :is(input,select,textarea):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.uhd button,.uhd input,.uhd select,.uhd textarea{-webkit-tap-highlight-color:transparent}
+@media(prefers-reduced-motion:reduce){.uhd *{transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:390px){.uhd .count{display:none}.uhd .results{padding:8px}.uhd .view{font-size:11px}.uhd .icons{gap:0}.uhd .ib{width:28px}}
 `;
 
   // Basit çizgi simgeleri (24×24, stroke).
@@ -183,6 +211,8 @@
     stop: '<rect x="6" y="6" width="12" height="12" rx="1"/>',
     x: '<path d="M18 6 6 18M6 6l12 12"/>',
     help: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    theme: '<path d="M21 12.8A9 9 0 0 1 11.2 3 9 9 0 1 0 21 12.8Z"/>',
+    filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
     back: '<path d="M15 18l-6-6 6-6"/>',
     check: '<path d="M20 6 9 17l-5-5"/>'
   };
@@ -240,22 +270,25 @@
     const btnQClear = el('button', { class: 'sbtn clear', title: 'Aramayı temizle', 'aria-label': 'Aramayı temizle', hidden: true }, icon('x'));
     const btnHelp = el('button', { class: 'sbtn help', title: 'Nerede aranır?', 'aria-label': 'Nerede aranır?' }, icon('help'));
     const count = el('span', { class: 'count' });
+    const views = el('nav', { class: 'views', 'aria-label': 'Görünümler' });
+    const live = el('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+    const btnTheme = el('button', { class: 'ib', title: 'Temayı değiştir', 'aria-label': 'Temayı değiştir' }, icon('theme'));
     const filters = el('div', { class: 'filters' });
-    const notice = el('div', { class: 'notice', hidden: true });
-    const list = el('div', { class: 'results' });
+    const notice = el('div', { class: 'notice', hidden: true, role: 'status', 'aria-live': 'polite' });
+    const list = el('div', { class: 'results', role: 'region', 'aria-label': 'Dosya sonuçları' });
     const settings = el('div', { class: 'settings', hidden: true });
     const barFill = el('i');
-    const bar = el('div', { class: 'bar', hidden: true }, barFill);
+    const bar = el('div', { class: 'bar', hidden: true, role: 'progressbar', 'aria-label': 'Dosya güncelleme', 'aria-valuemin': '0', 'aria-valuemax': '100' }, barFill);
     const status = el('div', { class: 'status', hidden: true }, bar);
     const statusText = el('div', { class: 'stx' });
     const btnUpdate = el('button', { class: 'btn sm primary' }, icon('sync'), el('span', null, 'Güncelle'));
     const btnStop = el('button', { class: 'btn sm danger', hidden: true }, icon('stop'), el('span', null, 'Durdur'));
     const btnSettings = el('button', { class: 'ib', title: 'Ayarlar', 'aria-label': 'Ayarlar' }, icon('gear'));
     const root = el('div', { class: 'uhd ' + (opts.mode || '') },
-      el('header', null, el('strong', null, BRAND.name), count,
-        opts.onClose ? el('button', { class: 'x', title: 'Kapat', onclick: opts.onClose }, '×') : null),
+      el('header', null, el('span', { class: 'brand-mark', 'aria-hidden': 'true' }, 'L'), el('strong', null, BRAND.name), count, btnTheme,
+        opts.onClose ? el('button', { class: 'x', title: 'Kapat', 'aria-label': 'Paneli kapat', onclick: opts.onClose }, '×') : null),
       el('div', { class: 'search' }, input, btnQClear, btnHelp),
-      filters, notice, list, settings, status,
+      views, filters, notice, list, settings, live, status,
       el('footer', null, statusText, btnStop, btnUpdate, btnSettings));
     container.append(el('style', null, CSS), root);
 
@@ -276,6 +309,11 @@
     let allParties = new Set();// tüm tarafları gösterilen kartlar
     let pendingJob = null;     // yarıda kalmış güncelleme işi (uhdJob)
     let person = null;         // açık müvekkil kartı: { name }
+    let filtersExpanded = false;
+    let hearingRange = 'week';
+    let shownLimit = LIMIT;
+    let loaded = false;
+    const dismissedNotices = new Set();
     let durusmaMeta = null;    // uhdDurusmalar: { at, gun, list }
     let durusmaByKey = new Map(); // kayıt key → yaklaşan duruşmalar (sıralı)
     let yeniMap = new Map();   // kayıt key → en yeni görülmemiş evrakın onay zamanı
@@ -288,6 +326,9 @@
     function applyTheme() {
       const t = prefs.tema || 'auto';
       root.dataset.theme = t === 'auto' ? (darkMq && darkMq.matches ? 'dark' : 'light') : t;
+      const label = root.dataset.theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç';
+      btnTheme.title = label;
+      btnTheme.setAttribute('aria-label', label);
     }
     if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyTheme);
     applyTheme();
@@ -320,17 +361,24 @@
         yeniCount += u.length;
         yeniMap.set(r.key, Math.max(...u.map(y => trDateTs(y.onay))) || 1);
       }
-      if (!yeniMap.size) filter.onlyNew = false;
     }
 
     // ------------------------------------------------ bildirim
 
-    function showNotice(text, kind, action) {
+    function showNotice(text, kind, action, noticeKey) {
       notice.replaceChildren();
-      if (!text) { notice.hidden = true; return; }
+      if (!text || (noticeKey && dismissedNotices.has(noticeKey))) { notice.hidden = true; return; }
       notice.className = 'notice' + (kind === 'err' ? ' err' : '');
       notice.append(el('span', null, text));
       if (action) notice.append(el('button', { onclick: action.fn }, action.label));
+      const dismiss = el('button', { class: 'dismiss', title: 'Bildirimi kapat', 'aria-label': 'Bildirimi kapat' }, '×');
+      dismiss.addEventListener('click', () => {
+        if (noticeKey) dismissedNotices.add(noticeKey);
+        manualNotice = false;
+        notice.hidden = true;
+        input.focus();
+      });
+      notice.append(dismiss);
       notice.hidden = false;
     }
 
@@ -342,25 +390,26 @@
 
     function autoNotice() {
       if (manualNotice) return;
+      if (filter.onlyDurusma || filter.onlyNew || person || !settings.hidden) return showNotice('');
       const yakinDur = upcomingDurusmalar(durusmaMeta && durusmaMeta.list).filter(d => daysLeft(d.tarih) <= 1);
-      if (records.length && yakinDur.length && !filter.onlyDurusma) {
+      if (pref('durusmaBildirim', true) && records.length && yakinDur.length && !filter.onlyDurusma) {
         const bugun = yakinDur.filter(d => daysLeft(d.tarih) === 0);
         const ilk = (bugun[0] || yakinDur[0]);
         const text = bugun.length
           ? `Bugün ${bugun.length} duruşmanız var; ilki ${ilk.saat}, ${ilk.dosyaNo} ${ilk.birimAdi}.`
           : `Yarın ${yakinDur.length} duruşmanız var; ilki ${ilk.saat}, ${ilk.dosyaNo} ${ilk.birimAdi}.`;
-        return showNotice(text, '', { label: 'Göster', fn: () => showDurusmalar() });
+        return showNotice(text, '', { label: 'Göster', fn: () => showDurusmalar() }, 'hearings:' + todayIso());
       }
       const update = { label: 'Güncelle', fn: () => { setNotice(''); opts.onUpdate(false); } };
       if (!records.length || running()) return showNotice('');
       const oldParties = records.filter(r => r.taraflar && r.tarafV !== TARAF_V).length;
-      if (oldParties) return showNotice(`Müvekkil ve vekil bilgisi için bir kez Güncelle’ye basın (${fmtNum(oldParties)} dosyanın tarafları yenilenecek).`, '', update);
+      if (oldParties) return showNotice(`Müvekkil ve vekil bilgisi için bir kez Güncelle’ye basın (${fmtNum(oldParties)} dosyanın tarafları yenilenecek).`, '', update, 'parties:' + oldParties);
       const days = meta.updatedAt ? Math.floor((Date.now() - meta.updatedAt) / 86400000) : 0;
-      if (days >= REMIND_DAYS) return showNotice(`Son güncelleme ${days} gün önce yapıldı. Yeni dosyalar için güncellemeniz önerilir.`, '', update);
+      if (days >= REMIND_DAYS) return showNotice(`Son güncelleme ${days} gün önce yapıldı. Yeni dosyalar için güncellemeniz önerilir.`, '', update, 'update:' + meta.updatedAt);
       if (yeniMap.size && !filter.onlyNew) {
         return showNotice(`${fmtNum(yeniMap.size)} dosyada ${fmtNum(yeniCount)} yeni evrak var.`, '', {
-          label: 'Göster', fn: () => { filter.onlyNew = true; sel = 0; renderFilters(); render(); autoNotice(); }
-        });
+          label: 'Göster', fn: () => switchView('new')
+        }, 'new:' + yeniCount);
       }
       showNotice('');
     }
@@ -370,51 +419,86 @@
     const CHIPS = [
       { group: 'durum', v: 'acik', label: 'Açık' },
       { group: 'durum', v: 'kapali', label: 'Kapalı' },
-      null,
       { group: 'tur', v: '0', label: 'Ceza' },
       { group: 'tur', v: '1', label: 'Hukuk' },
       { group: 'tur', v: '2', label: 'İcra' },
       { group: 'tur', v: 'other', label: 'Diğer', title: 'İdari Yargı, Satış Memurluğu, Arabuluculuk, Tazminat Komisyonu' },
-      null,
-      { group: 'onlyClient', v: true, label: 'Müvekkil', title: 'Yalnızca müvekkil adlarında ara', cls: 'client' },
-      { row: 2, group: 'onlyDurusma', v: true, label: 'Duruşmalar', title: 'Son güncellemede UYAP’tan alınan yaklaşan duruşmalar, günlere göre', cls: 'dur' },
-      { row: 2, group: 'onlyNew', v: true, label: 'Yeni Evrak', title: 'Güncellemelerde yeni evrak gelen ve henüz “Görüldü” demediğiniz dosyalar', cls: 'new' }
+      { group: 'onlyClient', v: true, label: 'Yalnız müvekkillerim', title: 'Yalnızca müvekkil adlarında ara', cls: 'client' }
     ];
-    const TOGGLES = ['onlyClient', 'onlyNew', 'onlyDurusma'];
+    const viewName = () => filter.onlyDurusma ? 'hearings' : filter.onlyNew ? 'new' : 'files';
     function clearFilters() {
-      filter.durum = 'all'; filter.tur = 'all';
-      for (const k of TOGGLES) filter[k] = false;
+      filter.durum = 'all'; filter.tur = 'all'; filter.onlyClient = false;
+      shownLimit = LIMIT;
+    }
+    function switchView(name) {
+      person = null;
+      editing = null;
+      filter.onlyDurusma = name === 'hearings';
+      filter.onlyNew = name === 'new';
+      sel = 0; shownLimit = LIMIT;
+      input.value = '';
+      btnQClear.hidden = true;
+      if (!settings.hidden) closeSettings();
+      renderFilters(); render(); autoNotice();
+      list.scrollTop = 0;
+    }
+    function renderViews() {
+      views.replaceChildren();
+      const active = viewName();
+      for (const [name, title, total] of [
+        ['files', 'Dosyalar', records.length],
+        ['hearings', 'Duruşmalar', upcomingDurusmalar(durusmaMeta && durusmaMeta.list).length],
+        ['new', 'Yeni evrak', yeniMap.size]
+      ]) {
+        const b = el('button', { class: 'view' + (name === active ? ' on' : ''), 'aria-pressed': String(name === active), 'data-view': name },
+          title, total ? el('small', { 'aria-label': fmtNum(total) + ' kayıt' }, fmtNum(total)) : null);
+        b.addEventListener('click', () => {
+          switchView(name);
+          views.querySelector(`[data-view="${name}"]`).focus();
+        });
+        views.append(b);
+      }
+      input.placeholder = active === 'hearings' ? 'Duruşmalarda kişi, dosya veya mahkeme ara' : 'Ad, dosya no, mahkeme veya not ara';
+      input.setAttribute('aria-label', active === 'hearings' ? 'Duruşmalarda ara' : 'Dosyalarda ara');
     }
     function renderFilters() {
+      renderViews();
       filters.replaceChildren();
-      const row1 = el('div', { class: 'frow' });
-      const row2 = el('div', { class: 'frow' }, el('span', { class: 'lbl' }, 'Takip:'));
-      let n2 = 0;
-      for (const c of CHIPS) {
-        if (!c) { row1.append(el('span', { class: 'sep' })); continue; }
-        if (c.group === 'onlyNew' && !evrakTracked) continue;
-        if (c.group === 'onlyDurusma' && !durusmaMeta) continue;
-        const on = filter[c.group] === c.v;
-        const label = c.group === 'onlyNew' && yeniMap.size ? `${c.label} (${fmtNum(yeniMap.size)})`
-          : c.group === 'onlyDurusma' ? `${c.label} (${fmtNum(upcomingDurusmalar(durusmaMeta.list).length)})` : c.label;
-        const b = el('button', { class: 'chip' + (c.cls ? ' ' + c.cls : '') + (on ? ' on' : ''), title: c.title || null, 'aria-pressed': String(on) }, label);
-        b.addEventListener('click', () => {
-          if (c.group === 'onlyClient' && !on && !myKeys(myName()).length) {
-            setNotice('Müvekkilleri ayırmak için vekil adınız bulunamadı. Ayarlar’dan ekleyin.', '', { label: 'Ayarlar', fn: () => { setNotice(''); openSettings(); } });
-            return;
-          }
-          filter[c.group] = on ? (TOGGLES.includes(c.group) ? false : 'all') : c.v;
-          if (c.row === 2 && !on) for (const k of ['onlyNew', 'onlyDurusma']) if (k !== c.group) filter[k] = false;
-          if (c.group === 'onlyDurusma') person = null;
-          sel = 0;
-          renderFilters();
-          render();
-          if (c.row === 2) autoNotice();
-        });
-        if (c.row === 2) { row2.append(b); n2++; } else row1.append(b);
+      if (filter.onlyDurusma) return;
+      const active = CHIPS.filter(c => filter[c.group] === c.v);
+      const toggle = el('button', { class: 'btn sm', 'aria-expanded': String(filtersExpanded) }, icon('filter'), active.length ? `Filtreler · ${active.length}` : 'Filtreler');
+      toggle.addEventListener('click', () => {
+        filtersExpanded = !filtersExpanded; renderFilters(); filters.querySelector('button').focus();
+      });
+      const top = el('div', { class: 'filter-top' }, toggle,
+        el('span', { class: 'filter-summary', title: active.map(c => c.label).join(' · ') }, active.length ? active.map(c => c.label).join(' · ') : 'Tüm dosya türleri'));
+      if (active.length) {
+        const reset = el('button', { class: 'btn sm', title: 'Dosya filtrelerini temizle' }, 'Temizle');
+        reset.addEventListener('click', () => { clearFilters(); sel = 0; renderFilters(); render(); filters.querySelector('button').focus(); });
+        top.append(reset);
       }
-      filters.append(row1);
-      if (n2) filters.append(row2);
+      filters.append(top);
+      if (!filtersExpanded) return;
+      const body = el('div', { class: 'filter-body' });
+      for (const [group, label] of [['durum', 'Durum'], ['tur', 'Yargı'], ['onlyClient', 'Taraf']]) {
+        const row = el('div', { class: 'frow', role: 'group', 'aria-label': label }, el('span', { class: 'lbl' }, label));
+        for (const c of CHIPS.filter(c => c.group === group)) {
+          const on = filter[c.group] === c.v;
+          const b = el('button', { class: 'chip' + (on ? ' on' : ''), 'aria-pressed': String(on), 'data-filter': c.group + ':' + c.v, title: c.title || null }, c.label);
+          b.addEventListener('click', () => {
+            if (c.group === 'onlyClient' && !on && !myKeys(myName()).length) {
+              return setNotice('Müvekkilleri ayırmak için Ayarlar’dan vekil adınızı ekleyin.', '', { label: 'Ayarlar', fn: openSettings });
+            }
+            filter[c.group] = on ? (c.group === 'onlyClient' ? false : 'all') : c.v;
+            sel = 0; shownLimit = LIMIT;
+            renderFilters(); render(); list.scrollTop = 0;
+            filters.querySelector(`[data-filter="${c.group}:${c.v}"]`).focus();
+          });
+          row.append(b);
+        }
+        body.append(row);
+      }
+      filters.append(body);
     }
 
     // ------------------------------------------------ sonuç satırı
@@ -482,7 +566,7 @@
     function noteBlock(r) {
       const has = !!notes[r.key];
       if (!has && editing !== r.key) return null;
-      const ta = el('textarea', { class: 'note-ta', rows: '1', placeholder: 'Bu dosyaya not yazın (yalnız bu bilgisayarda saklanır)…', title: 'Kişisel not · Enter: kaydet · Shift+Enter: yeni satır · Esc: vazgeç', spellcheck: 'true' });
+      const ta = el('textarea', { class: 'note-ta', rows: '1', placeholder: 'Bu dosyaya not yazın (yalnız bu bilgisayarda saklanır)…', 'aria-label': `${r.dosyaNo} kişisel notu`, title: 'Kişisel not · Enter: kaydet · Shift+Enter: yeni satır · Esc: vazgeç', spellcheck: 'true' });
       ta.value = notes[r.key] || '';
       const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 150) + 'px'; };
       let cancelled = false, finished = false;
@@ -503,7 +587,7 @@
         else if (e.key === 'Escape') { e.preventDefault(); cancelled = true; done(); input.focus(); }
       });
       ta.addEventListener('blur', done);
-      setTimeout(() => { fit(); if (editing === r.key && !has) ta.focus(); }, 0);
+      setTimeout(() => { fit(); if (editing === r.key) ta.focus(); }, 0);
       return ta;
     }
 
@@ -577,7 +661,6 @@
         if (!durusmaByKey.has(d.key)) durusmaByKey.set(d.key, []);
         durusmaByKey.get(d.key).push(d);
       }
-      if (!durusmaMeta) filter.onlyDurusma = false;
     }
 
     const gunText = n => (n === 0 ? 'bugün' : n === 1 ? 'yarın' : `${n} gün sonra`);
@@ -593,12 +676,9 @@
     }
 
     function showDurusmalar() {
-      person = null;
-      filter.onlyDurusma = true;
-      sel = 0;
-      renderFilters();
-      render();
-      autoNotice();
+      hearingRange = 'week';
+      switchView('hearings');
+      input.focus();
     }
 
     function exportIcs(list) {
@@ -615,13 +695,21 @@
       const byKey = new Map(records.map(r => [r.key, r]));
       const toks = norm(input.value).split(/\s+/).filter(Boolean);
       const all = upcomingDurusmalar(durusmaMeta && durusmaMeta.list);
+      const ranged = all.filter(d => hearingRange === 'all' || daysLeft(d.tarih) < (hearingRange === 'today' ? 1 : 7));
       const rows = toks.length
-        ? all.filter(d => { const h = norm([d.dosyaNo, d.birimAdi, d.islem, ...d.taraflar.map(t => t.ad)].join(' ')); return toks.every(t => h.includes(t)); })
-        : all;
+        ? ranged.filter(d => { const h = norm([d.dosyaNo, d.birimAdi, d.islem, ...(d.taraflar || []).map(t => t.ad)].join(' ')); return toks.every(t => h.includes(t)); })
+        : ranged;
+      const ranges = el('div', { class: 'frow', role: 'group', 'aria-label': 'Duruşma tarih aralığı' });
+      for (const [value, label] of [['today', 'Bugün'], ['week', 'Önümüzdeki 7 gün'], ['all', 'Tümü']]) {
+        const b = el('button', { class: 'chip' + (hearingRange === value ? ' on' : ''), 'aria-pressed': String(hearingRange === value), 'data-range': value }, label);
+        b.addEventListener('click', () => { hearingRange = value; sel = 0; render(); list.querySelector(`[data-range="${value}"]`).focus(); });
+        ranges.append(b);
+      }
       const ics = el('button', { class: 'btn sm', title: 'Listelenen duruşmaları takvim dosyası (.ics) olarak indir; Outlook, Google Takvim ve telefon takvimleri açar. Taraf adları yazılmaz.' }, 'Takvime aktar (.ics)');
       ics.addEventListener('click', () => exportIcs(rows));
       const src = durusmaMeta && durusmaMeta.at ? `UYAP’tan ${fmtAgo(durusmaMeta.at)} alındı; sonraki ${durusmaMeta.gun || 60} gün.` : '';
       const head = el('div', { class: 'durhead' },
+        ranges,
         el('div', null, el('b', null, `${fmtNum(rows.length)} duruşma`), toks.length ? ` (“${input.value.trim()}” içeren)` : '', ' · ', src),
         el('div', { class: 'row' }, rows.length ? ics : null,
           el('span', { style: 'color:var(--muted);font-size:11px' }, 'Saatleri UYAP’ta teyit edin; liste yalnız Güncelle’de yenilenir.')));
@@ -647,12 +735,19 @@
             el('div', { class: 'info' },
               el('div', { class: 'title' }, el('b', null, d.dosyaNo), el('span', null, d.birimAdi)),
               el('div', { class: 'meta' }, [d.islem, d.dosyaTur].filter(Boolean).join(' · ')),
-              el('div', { class: 'parties' }, d.taraflar.map(t => `${t.sifat ? trTitle(t.sifat) + ': ' : ''}${trTitle(t.ad)}`).join(' · ')),
+              el('div', { class: 'parties' }, (d.taraflar || []).map(t => `${t.sifat ? trTitle(t.sifat) + ': ' : ''}${trTitle(t.ad)}`).join(' · ')),
               el('div', { class: 'meta' }, 'Bu dosya indekste yok; açmak için Güncelle’ye basın.'))));
         }
       }
-      if (!rows.length) out.push(el('div', { class: 'empty' }, all.length ? 'Aramanızla eşleşen duruşma yok.' : `Sonraki ${durusmaMeta && durusmaMeta.gun || 60} günde duruşma görünmüyor.`));
+      if (!rows.length) {
+        const showAll = el('button', { class: 'btn sm' }, 'Tüm tarihleri göster');
+        showAll.addEventListener('click', () => { hearingRange = 'all'; render(); });
+        out.push(el('div', { class: 'empty' }, el('strong', null, durusmaMeta ? 'Bu aralıkta duruşma yok' : 'Duruşmalar henüz alınmadı'),
+          el('p', null, toks.length ? 'Başka bir isim deneyin veya tarih aralığını genişletin.' : durusmaMeta ? 'Yeni bilgiler için dosyalarınızı güncelleyebilirsiniz.' : 'Güncelle’ye bastığınızda duruşmalarınız burada görünür.'),
+          hearingRange !== 'all' && all.length ? showAll : null));
+      }
       list.append(...out);
+      live.textContent = `${fmtNum(rows.length)} duruşma listelendi.`;
       if (sel >= current.length) sel = 0;
     }
 
@@ -710,11 +805,12 @@
         ib('note', notes[r.key] ? 'Notu düzenle (yalnız bu bilgisayarda)' : 'Not ekle (yalnız bu bilgisayarda)', () => { editing = r.key; sel = i; render(); }, notes[r.key] ? 'on' : ''),
         ib('hide', 'Bu dosyayı aramalarda gösterme (Ayarlar’dan geri alınır)', () => hideFile(r)));
       const isOpen = expanded.has(r.key);
-      const detBtn = el('button', { class: 'btn sm', title: 'Durum, dosya türü, açılış tarihi ve son evrak' }, icon(isOpen ? 'up' : 'down'), 'Detay');
+      const detBtn = el('button', { class: 'btn sm', 'aria-expanded': String(isOpen), title: 'Durum, dosya türü, açılış tarihi ve son evrak' }, icon(isOpen ? 'up' : 'down'), 'Detay');
       detBtn.addEventListener('click', e => {
         e.stopPropagation();
         if (isOpen) expanded.delete(r.key); else expanded.add(r.key);
         render();
+        list.querySelectorAll('.item')[i]?.querySelector('.ifoot button')?.focus();
       });
       const open = el('button', { class: 'btn sm primary open', title: 'Dosyayı UYAP’ta Pencere Görünümü ile aç (karta tıklamak da açar)' }, icon('eye'), 'Dosya Görüntüle');
       open.addEventListener('click', e => { e.stopPropagation(); openRecord(r); });
@@ -726,11 +822,11 @@
           r.yargiTuru === '2' ? panelBtn(r, 'ozet', 'İcra özeti', 'Alacak, tahsilat ve kalan tutar (ücretsiz)') : null,
           r.yargiTuru === '2' ? panelBtn(r, 'sorgu', 'Borçlu sorgusu', 'SGK, banka, tapu, araç… (ücretli olabilir; onayla ve tek tek)') : null,
           panelBtn(r, 'safahat', 'Safahat', 'Dosyanın işlem geçmişi')) : null) : null;
-      const row = el('div', { class: 'item' + (st.cls ? ' ' + st.cls : '') + (i === sel ? ' sel' : '') },
+      const row = el('article', { class: 'item' + (st.cls ? ' ' + st.cls : '') + (i === sel ? ' sel' : ''), 'aria-label': `${r.dosyaNo} ${cleanBirim(r.birimAdi)}` },
         el('div', { class: 'ihead' },
           el('div', { class: 'ititle' },
-            highlight(cleanBirim(r.birimAdi), toks), el('span', { class: 'dot' }, '·'), highlight(r.dosyaNo, toks),
-            st.cls ? el('span', { class: 'pill st ' + st.cls, title: st.tarih ? `${st.label} · ${st.tarih}` : st.label }, st.label) : null,
+            el('span', { class: 'file-number' }, highlight(r.dosyaNo, toks)), highlight(cleanBirim(r.birimAdi), toks),
+            el('span', { class: 'pill st ' + st.cls, title: st.tarih ? `${st.label} · ${st.tarih}` : st.label }, st.label),
             yeniMap.has(r.key) ? el('span', { class: 'pill new' }, 'Yeni Evrak') : null),
           icons),
         el('div', { class: 'hr' }),
@@ -738,11 +834,14 @@
         islemLine(r),
         extra || null,
         partyLines(r, toks, keys),
-        evrakBlock(r, toks),
+        !filter.onlyDurusma || isOpen ? evrakBlock(r, toks) : null,
         noteBlock(r),
         det,
         el('div', { class: 'ifoot' }, detBtn, open));
-      row.addEventListener('click', () => openRecord(r));
+      row.addEventListener('click', e => {
+        if (e.target.closest('button, a, input, textarea, select') || String(window.getSelection && window.getSelection()).trim()) return;
+        openRecord(r);
+      });
       row.addEventListener('mouseenter', () => select(i, false));
       return row;
     }
@@ -759,7 +858,15 @@
       const scroll = list.scrollTop;
       list.replaceChildren();
       current = [];
-      filters.hidden = !records.length || !!person || !settings.hidden;
+      btnQClear.hidden = !input.value;
+      views.hidden = !loaded || (!records.length && !durusmaMeta) || !!person || !settings.hidden;
+      filters.hidden = !records.length || !!person || !settings.hidden || filter.onlyDurusma;
+      if (!loaded) {
+        list.append(el('div', { class: 'empty', role: 'status' }, 'Dosyalarınız hazırlanıyor…'));
+        return;
+      }
+      if (person) return renderPerson();
+      if (filter.onlyDurusma) return renderDurusmalar();
       if (!records.length) {
         const run = running();
         const go = el('button', { class: 'btn primary', disabled: run }, run ? 'İlk güncelleme sürüyor…' : 'Şimdi güncelle');
@@ -774,31 +881,49 @@
           el('p', { style: 'margin:12px 0 0;font-size:12px;color:var(--muted)' }, 'Ayrıntılar: ', el('a', { href: BRAND.site + '/gizlilik/uyap-asistani', target: '_blank', rel: 'noopener' }, 'gizlilik politikası'), '.')));
         return;
       }
-      if (person) return renderPerson();
-      if (filter.onlyDurusma) return renderDurusmalar();
       const keys = myKeys(myName());
       const q = input.value;
-      const res = search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, gizli, vekilAra: pref('vekilAra', true), limit: LIMIT });
-      const hint = el('span', { title: 'Arama kutusundayken ↑ ↓ ya da Tab ile dosyalar arasında gezinin, Enter ile seçili dosyayı açın.' }, '↑ ↓ / Tab: seç · Enter: aç');
+      const res = search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, gizli, vekilAra: pref('vekilAra', true), sort: pref('siralama', 'relevance'), limit: shownLimit });
+      live.textContent = `${fmtNum(res.total)} dosya bulundu.`;
+      const sortSelect = el('select', { class: 'sort', 'aria-label': 'Dosya sıralaması' },
+        [['relevance', 'En uygun'], ['newest', 'Açılış: yeniden eskiye'], ['fileNo', 'Dosya no: büyükten küçüğe']].map(([value, label]) => el('option', { value }, label)));
+      sortSelect.value = pref('siralama', 'relevance');
+      sortSelect.addEventListener('change', async () => {
+        sel = 0; shownLimit = LIMIT;
+        await setPref('siralama', sortSelect.value);
+        render(); list.querySelector('.sort')?.focus();
+      });
       if (!res.tokens.length && !res.total && filter.durum === 'all' && filter.tur === 'all' && !filter.onlyClient && !filter.onlyNew) {
         const byKey = new Map(records.map(r => [r.key, r]));
         current = recent.map(k => byKey.get(k)).filter(r => r && !gizli[r.key]);
         if (!current.length) {
-          list.append(el('div', { class: 'empty' }, `${fmtNum(records.length)} dosya indekste. Aramak için ad, soyad, dosya no veya mahkeme yazın ya da yukarıdan filtre seçin.`));
+          const openFiles = el('button', { class: 'btn sm' }, 'Açık dosyalar');
+          openFiles.addEventListener('click', () => { filter.durum = 'acik'; renderFilters(); render(); input.focus(); });
+          const hearings = el('button', { class: 'btn sm' }, 'Duruşmalarım');
+          hearings.addEventListener('click', showDurusmalar);
+          list.append(el('div', { class: 'empty' }, el('strong', null, 'Dosyanızı kolayca bulun'),
+            el('p', null, `${fmtNum(records.length)} dosya hazır. Bir isim, dosya numarası veya mahkeme yazın.`),
+            el('div', { class: 'quick-actions' }, openFiles, hearings)));
           return;
         }
-        list.append(el('div', { class: 'section' }, el('b', null, 'Son açılanlar'), hint));
+        live.textContent = `${fmtNum(current.length)} son açılan dosya.`;
+        list.append(el('div', { class: 'section' }, el('b', null, 'Son açılanlar'), el('span', null, 'Kaldığınız yerden devam edin')));
       } else {
         current = res.items;
         if (!res.total) {
           const narrowed = filter.durum !== 'all' || filter.tur !== 'all' || filter.onlyClient || filter.onlyNew;
           let text = 'Eşleşen dosya yok.';
           let action = narrowed ? { label: 'Filtreleri kaldır', fn: () => { clearFilters(); renderFilters(); render(); } } : null;
+          if (filter.onlyNew && res.tokens.length) action = { label: 'Tüm dosyalarda ara', fn: () => {
+            filter.onlyNew = false; clearFilters(); renderFilters(); render(); input.focus();
+          } };
           if (filter.onlyNew && !res.tokens.length) {
-            text = 'Son güncellemeden bu yana yeni evrak yok.';
-            action = { label: 'Güncelle', fn: () => { setNotice(''); opts.onUpdate(false); } };
+            text = evrakTracked ? 'Son güncellemeden bu yana yeni evrak yok.' : 'Evrak takibi henüz açılmadı.';
+            action = !evrakTracked ? { label: 'Takibi ayarla', fn: openSettings }
+              : { label: 'Güncelle', fn: () => { setNotice(''); opts.onUpdate(false); } };
           }
-          const box = el('div', { class: 'empty' }, el('div', null, text));
+          const box = el('div', { class: 'empty' }, el('strong', null, text),
+            res.tokens.length ? el('p', null, 'Adın bir bölümünü veya dosya numarasını deneyin. Türkçe karakter kullanmanız gerekmez.') : null);
           if (action) {
             const b = el('button', { class: 'btn' }, action.label);
             b.addEventListener('click', action.fn);
@@ -813,12 +938,20 @@
           all.addEventListener('click', () => markSeen(search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, gizli, limit: Infinity }).items.map(r => r.key)));
           total.append(' · ', all);
         }
-        list.append(el('div', { class: 'section' }, total, hint));
+        list.append(el('div', { class: 'section' }, total, sortSelect));
       }
       if (sel >= current.length) sel = 0;
       current.forEach((r, i) => list.append(item(r, i, res.tokens, keys)));
       if (res.tokens.length && !pref('vekilAra', true)) list.append(el('div', { class: 'more' }, 'Karşı taraf vekillerinde arama kapalı (Ayarlar).'));
-      if (res.total > current.length) list.append(el('div', { class: 'more' }, `${fmtNum(res.total)} sonuçtan ilk ${current.length} gösteriliyor. Aramayı daraltın.`));
+      if (res.total > current.length) {
+        const more = el('button', { class: 'btn sm load-more' }, `Daha fazla göster · ${fmtNum(current.length)} / ${fmtNum(res.total)}`);
+        more.addEventListener('click', () => {
+          const previous = current.length;
+          shownLimit += LIMIT; render();
+          list.querySelectorAll('.item')[previous]?.querySelector('button')?.focus();
+        });
+        list.append(more);
+      }
       list.scrollTop = scroll;
     }
 
@@ -830,6 +963,7 @@
       sel = 0;
       render();
       list.scrollTop = 0;
+      list.querySelector('.person button')?.focus();
     }
 
     function closePerson() {
@@ -943,6 +1077,7 @@
       const err = !run && !!(progress && progress.error);
       statusText.classList.toggle('err', err);
       status.hidden = !run || !progress.total;
+      bar.hidden = status.hidden;
       if (run) {
         let text = progress.text || 'Güncelleniyor…';
         if (progress.total && progress.done && progress.phaseStart) {
@@ -952,6 +1087,7 @@
         }
         statusText.textContent = text;
         barFill.style.width = progress.total ? `${Math.round(100 * progress.done / progress.total)}%` : '0';
+        bar.setAttribute('aria-valuenow', String(progress.total ? Math.min(100, Math.round(100 * progress.done / progress.total)) : 0));
       } else {
         const last = meta.updatedAt ? `Son güncelleme: ${fmtAgo(meta.updatedAt)} (${fmtDate(meta.updatedAt)})` : 'Henüz güncelleme yapılmadı.';
         const recentText = progress && progress.text && progress.endedAt && (paused || err || Date.now() - progress.endedAt < 3600000);
@@ -1012,17 +1148,23 @@
       settings.hidden = false;
       list.hidden = true;
       filters.hidden = true;
+      views.hidden = true;
       btnSettings.classList.add('on');
+      btnSettings.setAttribute('aria-expanded', 'true');
       renderSettings();
       settings.scrollTop = 0;
+      autoNotice();
+      settings.querySelector('button')?.focus();
     }
 
     function closeSettings() {
       settings.hidden = true;
       list.hidden = false;
       btnSettings.classList.remove('on');
+      btnSettings.setAttribute('aria-expanded', 'false');
       render();
       input.focus();
+      autoNotice();
     }
 
     function renderSettings() {
@@ -1034,7 +1176,7 @@
         return el('label', { class: 'check' }, box, el('div', null, el('div', null, label), hint ? el('div', { class: 'hint' }, hint) : null));
       };
       const select = (key, def, label, options, onChange) => {
-        const sel = el('select', null, options.map(([v, t]) => el('option', { value: v, selected: pref(key, def) === v }, t)));
+        const sel = el('select', { 'aria-label': label }, options.map(([v, t]) => el('option', { value: v, selected: pref(key, def) === v }, t)));
         sel.addEventListener('change', async () => { await setPref(key, sel.value); if (onChange) onChange(sel.value); });
         return el('div', { class: 'field' }, el('span', null, label), sel);
       };
@@ -1048,7 +1190,7 @@
         x.addEventListener('click', async () => { await setPref('myName', names.filter(v => v !== n).join(', ')); renderSettings(); render(); });
         tags.append(el('span', { class: 'tag' }, trTitle(n), x));
       }
-      const nameIn = el('input', { type: 'text', placeholder: 'Ad Soyad', autocomplete: 'off', spellcheck: 'false' });
+      const nameIn = el('input', { type: 'text', placeholder: 'Ad Soyad', 'aria-label': 'Müvekkilleri ayırmak için vekil adı', autocomplete: 'off', spellcheck: 'false' });
       const add = async () => {
         const v = nameIn.value.trim().replace(/^av\.?\s+/i, '');
         if (!v) return;
@@ -1129,6 +1271,7 @@
 
         el('h3', null, 'UYAP'),
         el('div', { class: 'box' },
+          check('durusmaBildirim', true, 'Yaklaşan duruşmaları hatırlat', 'Bugün ve yarınki duruşmaları bildirir. Duruşmalar ekranına her zaman ulaşabilirsiniz.', () => autoNotice()),
           check('duyuruGizle', false, 'Girişteki duyuru penceresini gizle', 'Önerilmez: kesinti ve bakım duyurularını kaçırabilirsiniz. KVKK onay penceresine hiçbir durumda dokunulmaz.')),
 
         el('h3', null, 'Veriler'),
@@ -1152,31 +1295,42 @@
 
     // ------------------------------------------------ olaylar
 
-    // Büyük indekslerde her tuşta değil, yazmaya kısa bir ara verilince ara.
+    // Yazma bittikten kısa süre sonra ara; büyük listelerde ana iş parçacığını her tuşta meşgul etme.
     let typeTimer;
     input.addEventListener('input', () => {
       sel = 0;
+      shownLimit = LIMIT;
       editing = null;
       person = null;
       btnQClear.hidden = !input.value;
       if (!settings.hidden) closeSettings();
       clearTimeout(typeTimer);
-      if (records.length > 3000) typeTimer = setTimeout(render, 90);
-      else render();
+      typeTimer = setTimeout(() => { typeTimer = null; render(); list.scrollTop = 0; }, records.length > 3000 ? 100 : 60);
     });
-    // Arama kutusundayken ↑ ↓ ve Tab / Shift+Tab sonuçlar arasında gezinir, Enter seçili dosyayı açar.
+    // Oklar sonuç seçer; Tab tarayıcının doğal odak sırasını korur.
     input.addEventListener('keydown', e => {
-      const n = list.querySelectorAll('.item').length;
-      if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey && n)) { e.preventDefault(); select(sel + 1 >= n && e.key === 'Tab' ? 0 : sel + 1, true); }
-      else if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey && n)) { e.preventDefault(); select(sel - 1 < 0 && e.key === 'Tab' ? n - 1 : sel - 1, true); }
-      else if (e.key === 'Enter' && current[sel]) { e.preventDefault(); openRecord(current[sel]); }
-      else if (e.key === 'Escape' && person) { e.preventDefault(); closePerson(); }
-      else if (e.key === 'Escape' && input.value) { e.preventDefault(); input.value = ''; input.dispatchEvent(new Event('input')); }
-      else if (e.key === 'Escape' && opts.onClose) { opts.onClose(); }
+      if (e.isComposing) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+        if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; render(); }
+        if (e.key === 'ArrowDown') { e.preventDefault(); select(sel + 1, true); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); select(sel - 1, true); }
+        else if (current[sel]) { e.preventDefault(); openRecord(current[sel]); }
+      }
+    });
+    root.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault(); e.stopPropagation();
+      clearTimeout(typeTimer);
+      if (!settings.hidden) closeSettings();
+      else if (person) closePerson();
+      else if (input.value) { input.value = ''; sel = 0; shownLimit = LIMIT; render(); input.focus(); }
+      else if (filter.onlyDurusma || filter.onlyNew) { switchView('files'); input.focus(); }
+      else if (filtersExpanded) { filtersExpanded = false; renderFilters(); input.focus(); }
+      else if (opts.onClose) opts.onClose();
     });
     btnQClear.addEventListener('click', () => { input.value = ''; input.dispatchEvent(new Event('input')); input.focus(); });
     btnHelp.addEventListener('click', () => {
-      setNotice('Aranan yerler: dosya no, mahkeme, dosya türü, taraf adları, karşı taraf vekilleri (Ayarlar’dan kapatılabilir) ve notlarınız. Türkçe karakter gerekmez. Birden çok kelime yazarsanız hepsi aranır; aynı yerde geçenler (ör. mahkeme adında) önce gelir.', '', { label: 'Tamam', fn: () => setNotice('') });
+      setNotice('İsim, dosya no, mahkeme veya not yazın; Türkçe karakter gerekmez. ↑ ↓ ile sonuç seçin, Enter ile açın. Tab kontrollere geçer, Esc bir adım geri döner.', '', { label: 'Tamam', fn: () => { setNotice(''); input.focus(); } });
     });
     btnUpdate.addEventListener('click', () => { setNotice(''); opts.onUpdate(false); });
     btnStop.addEventListener('click', async () => {
@@ -1186,8 +1340,14 @@
       await chrome.storage.local.set({ uhdProgress: { running: false, text: 'Yarıda kalan güncelleme iptal edildi.', endedAt: Date.now() } });
     });
     btnSettings.addEventListener('click', () => (settings.hidden ? openSettings() : closeSettings()));
+    btnTheme.addEventListener('click', async () => {
+      await setPref('tema', root.dataset.theme === 'dark' ? 'light' : 'dark');
+      applyTheme();
+    });
 
+    render();
     chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu', 'uhdJob', 'uhdDurusmalar', 'uhdGizli']).then(v => {
+      loaded = true;
       prefs = v.uhdPrefs || {};
       applyTheme();
       durusmaMeta = v.uhdDurusmalar || null;
@@ -1203,6 +1363,10 @@
       render();
       renderStatus();
       autoNotice();
+    }).catch(() => {
+      loaded = true;
+      render();
+      setNotice('Yerel dosyalar okunamadı. Eklentiyi güncellediyseniz UYAP sayfasını yenileyin.', 'err');
     });
     chrome.storage.onChanged.addListener((ch, area) => {
       if (area !== 'local') return;
@@ -1223,7 +1387,7 @@
       }
       if (redraw && !editing && settings.hidden) render();
       renderStatus();
-      if (ch.uhdIndex || ch.uhdProgress || ch.uhdEvrakGoruldu || ch.uhdDurusmalar) autoNotice();
+      if (ch.uhdIndex || ch.uhdProgress || ch.uhdEvrakGoruldu || ch.uhdDurusmalar || ch.uhdPrefs) autoNotice();
     });
     setInterval(renderStatus, 5000);
 

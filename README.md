@@ -29,15 +29,28 @@
 2. **Ara:** İsmi, dosya numarasını veya mahkemeyi yazın.
 3. **Aç:** **Dosya Görüntüle**'ye basın.
 
-![Müvekkil adıyla arama ve dosya sonuçları](assets/arama.png)
-
 ## Eklentiden bir bakış
 
-| Filtreleyin, not alın | Verileriniz cihazınızda kalsın |
+| Açık tema | Koyu tema |
 | :---: | :---: |
-| <img src="assets/filtreler.png" alt="Dosya filtreleri ve notlar" width="100%"> | <img src="assets/gizlilik.png" alt="Yerel veri saklama ayarları" width="100%"> |
+| <img src="assets/arama.png" alt="Açık temada dosya arama ve yeni arayüz" width="100%"> | <img src="assets/filtreler.png" alt="Koyu temada dosya kartı ve notlar" width="100%"> |
 
-Dosyaları açık/kapalı ve yargı türüne göre süzebilir, aynı kişiye ait dosyaları bir arada görebilir, kendinize not ekleyebilirsiniz.
+*1.14.0 arayüzü; görüntülerde örnek veriler kullanılmıştır. Mağaza sürümü inceleme durumuna göre farklı olabilir.*
+
+<details>
+<summary>Ayarları görüntüle</summary>
+
+<img src="assets/gizlilik.png" alt="Müvekkil, tema ve dosya açma ayarları" width="500">
+
+</details>
+
+| İhtiyacınız | Kısayolunuz |
+| :--- | :--- |
+| Günlük işlere odaklanın | **Dosyalar · Duruşmalar · Yeni evrak** görünümleri arasında geçin. Duruşmalarda **Bugün / Önümüzdeki 7 gün / Tümü** aralığını seçin. |
+| Aradığınızı daraltın | **Filtreler**'i açın; durum, yargı türü ve taraf seçin. **Temizle** ile filtreleri kaldırın. Sonuçları uygunluğa, açılış tarihine veya dosya numarasına göre sıralayın. |
+| Kendinize göre kullanın | Üstteki tema düğmesiyle açık/koyu görünümü değiştirin. UYAP'ın sağ kenarındaki paneli **sabitleyin**, sayfaya tıklarken açık kalsın. |
+
+Arama kutusundayken **↑ ↓** ile sonuç seçin, **Enter** ile açın, **Esc** ile geri dönün; **Tab** ile düğmelere geçin. Aynı kişinin dosyalarını adına tıklayarak görün, dosya kartına not ekleyin. Duruşma uyarılarını **Ayarlar → UYAP → Yaklaşan duruşmaları hatırlat** seçeneğinden yönetin.
 
 ## Kurulum
 

@@ -113,16 +113,22 @@
       }
     }
     const base = [r.dosyaNo, r.birimAdi, r.dosyaTur, r.yargiTuruAdi, r.birimTuruAdi].map(norm);
+    const fileNo = /^\s*(\d{4})\s*\/\s*(\d+)/.exec(String(r.dosyaNo || ''));
+    const fields = base.concat(clients, others);
+    const fieldsWithVekils = fields.concat(vekils);
     c = {
       ctx,
       no: norm(r.dosyaNo),
+      fileYear: fileNo ? Number(fileNo[1]) : 0,
+      fileSequence: fileNo ? Number(fileNo[2]) : 0,
       birim: norm(r.birimAdi),
       clients,
       parties: clients.concat(others),
       vekils,
-      fields: base.concat(clients, others),
-      all: base.concat(clients, others, vekils).join(' | '),
-      noVek: base.concat(clients, others).join(' | '),
+      fields,
+      fieldsWithVekils,
+      all: fieldsWithVekils.join(' | '),
+      noVek: fields.join(' | '),
       clientOnly: base.concat(clients).join(' | ')
     };
     infoCache.set(r, c);
@@ -133,7 +139,8 @@
 
   // Tüm kelimeler geçmeli; dosya numarası, müvekkil ve taraf adı başından eşleşmeler öne çıkar.
   // o: { myName, notes: {key: metin}, filter: {durum, tur, onlyClient, onlyNew}, yeni: Map(key → en yeni evrak zamanı),
-  //      gizli: {key: true} (aramada gösterilmeyecek dosyalar), vekilAra: false (karşı vekillerde arama), limit }
+  //      gizli: {key: true} (aramada gösterilmeyecek dosyalar), vekilAra: false (karşı vekillerde arama),
+  //      sort: 'relevance' | 'newest' | 'fileNo', limit }
   // Birden çok kelimede, hepsi aynı alanda (ör. mahkeme adında) geçen dosyalar öne çıkar.
   function search(records, query, o = {}) {
     const ts = tokens(query);
@@ -154,7 +161,7 @@
       const c = info(r, keys, ctx);
       if (f.onlyClient && !c.clients.length) continue;
       const hay = f.onlyClient ? c.clientOnly : vekilAra ? c.all : c.noVek;
-      const note = notes[r.key] ? norm(notes[r.key]) : '';
+      const note = ts.length && notes[r.key] ? norm(notes[r.key]) : '';
       let score = 0;
       let ok = true;
       for (const t of ts) {
@@ -167,16 +174,21 @@
         if (c.birim.includes(t)) score += 2;
       }
       if (ok && ts.length > 1) {
-        const fields = f.onlyClient ? c.clients : vekilAra ? c.fields.concat(c.vekils) : c.fields;
+        const fields = f.onlyClient ? c.clients : vekilAra ? c.fieldsWithVekils : c.fields;
         if (fields.some(x => ts.every(t => x.includes(t))) || (note && ts.every(t => note.includes(t)))) score += 60;
       }
-      if (ok) hits.push({ score, r });
+      if (ok) hits.push({ score, r, c });
     }
-    hits.sort((a, b) =>
+    const byRelevance = (a, b) =>
       b.score - a.score ||
       (yeni.get(b.r.key) || 0) - (yeni.get(a.r.key) || 0) ||
       (a.r.sorguDurum || 0) - (b.r.sorguDurum || 0) ||
-      (b.r.acilisTs || 0) - (a.r.acilisTs || 0));
+      (b.r.acilisTs || 0) - (a.r.acilisTs || 0);
+    hits.sort(o.sort === 'newest'
+      ? (a, b) => (b.r.acilisTs || 0) - (a.r.acilisTs || 0) || byRelevance(a, b)
+      : o.sort === 'fileNo'
+        ? (a, b) => b.c.fileYear - a.c.fileYear || b.c.fileSequence - a.c.fileSequence || byRelevance(a, b)
+        : byRelevance);
     const limit = o.limit || 60;
     return { total: hits.length, items: hits.slice(0, limit).map(h => h.r), tokens: ts };
   }
