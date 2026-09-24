@@ -393,6 +393,21 @@ html[data-theme="dark"] .ico-moon { display: inline; }
   color: var(--muted);
 }
 
+.maas-options select,
+.maas-options input {
+  width: 100%;
+  margin: 0 0 7px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.maas-options .evrak__title { display: block; }
+.maas-options .safety { margin: 0; }
+
 .check {
   display: flex;
   align-items: center;

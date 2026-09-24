@@ -90,6 +90,31 @@
             </span>
             <span class="check__label">Banka</span>
           </label>
+          <label class="check">
+            <input type="checkbox" data-opt="toplu.maas">
+            <span class="check__box">
+              <svg viewBox="0 0 24 24" width="10" height="10" aria-hidden="true">
+                <path d="m5 12 5 5L19 7" fill="none" stroke="currentColor" stroke-width="3"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="check__label">Maaşın 1/4'ü</span>
+          </label>
+        </div>
+
+        <div id="maas-options" class="maas-options check--sep" hidden>
+          <label for="maas-status" class="evrak__title">Çalışma durumu</label>
+          <select id="maas-status" autocomplete="off">
+            <option value="">Seçiniz</option>
+            <option value="0">Çalışan Kamu</option>
+            <option value="1">Çalışan Özel</option>
+            <option value="2">Emekli Kamu</option>
+            <option value="3">Emekli Özel</option>
+          </select>
+          <label for="maas-employer" class="evrak__title">Maaş veren kurum (isteğe bağlı)</label>
+          <input id="maas-employer" type="text" autocomplete="off"
+                 placeholder="UYAP'taki kurum adını aynen yazın">
+          <p class="safety">SSK çalışanı sorgusu açıksa işyeri unvanı ve vergi numarası alınır. Kurum dosyada yoksa UYAP'ın Taraf Ekle formunda aranır.</p>
         </div>
 
         <label class="check check--sep">
@@ -155,7 +180,8 @@
       <div class="howto__body">
         <b>Kullanım</b>
         <p>Kesinleşmiş takip dosyasını açın, Borçlu Bilgileri&#8217;nden bir
-        borçlu seçin, istenen haciz türlerini seçin, sonra düğmeye basın.</p>
+        borçlu seçin, istenen haciz türlerini seçin, sonra düğmeye basın.
+        Maaş haczinde çalışma durumunu seçin; kurum seçimi belirsizse işlem durur.</p>
 
         <b>İşlem sürerken sayfaya dokunmayın</b>
         <p>Sorgulama ve ekleme sürerken sayfada bir yere tıklarsanız sıralamayı

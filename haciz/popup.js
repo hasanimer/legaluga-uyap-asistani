@@ -8,15 +8,15 @@
 // background.js ile aynı numara. Tutmuyorsa Chrome hâlâ eklentinin eski
 // sürümünü çalıştırıyordur ve popup'ta yapılan seçimler sayfaya ulaşmaz;
 // böyle bir durumda iş hiç başlatılmaz (bkz. background.js'teki açıklama).
-const PROTOCOL = 3;
+const PROTOCOL = 4;
 
 const PROGRESS_KEY = 'ubh_progress';
 const PREFS_KEY = 'ubh_prefs';
 const UYAP_PREFIX = 'https://avukat.uyap.gov.tr/';
 
 // Toplu akışta çalışabilecek haciz türleri. Sıra burada değil sayfa tarafında
-// belirlenir: banka seçiliyse daima en sonda çalışır.
-const BULK_TYPES = ['egm', 'icra', 'takbis', 'banka'];
+// belirlenir: banka sorgulardan sonra, maaş talebi onun ardından çalışır.
+const BULK_TYPES = ['egm', 'icra', 'takbis', 'banka', 'maas'];
 
 // Sayfa kapanmış ya da sekme değişmişse "çalışıyor" durumu sonsuza kadar
 // asılı kalmasın diye üst sınır. Tek tek eklenecek çok sayıda kayıt
@@ -38,6 +38,9 @@ const el = {
   statusDetail: document.getElementById('status-detail'),
   statusFill: document.getElementById('status-fill'),
   stages: document.getElementById('stages'),
+  maasOptions: document.getElementById('maas-options'),
+  maasStatus: document.getElementById('maas-status'),
+  maasEmployer: document.getElementById('maas-employer'),
   version: document.getElementById('version')
 };
 
@@ -46,15 +49,15 @@ const el = {
 // Banka talebinin evrak türü. İkisinden biri daima seçilidir.
 const BANKA_TALEP = ['ihbarname', 'muzekkere'];
 
-// Dört haciz türü de öntanımlı olarak tiklidir: olağan kullanım hepsini
-// hazırlamaktır, tik kaldırmak istisnadır. Ücretli sorgu onayı ise para
+// Önceki dört haciz türü öntanımlı olarak tiklidir; maaş haczi açık bir
+// çalışma durumu seçimi gerektirdiği için kapalı başlar. Ücretli sorgu onayı para
 // harcattığı için öntanımlı olarak kapalıdır. Banka talebi öntanımlı olarak
 // 89/1 haciz ihbarnamesidir.
 function defaultPrefs() {
   return {
     theme: 'light',
     toplu: {
-      paid: false, egm: true, icra: true, takbis: true, banka: true,
+      paid: false, egm: true, icra: true, takbis: true, banka: true, maas: false,
       bankaTalep: 'ihbarname'
     }
   };
@@ -72,6 +75,7 @@ function applyPrefs() {
     const value = prefs[group]?.[key];
     input.checked = input.type === 'radio' ? value === input.value : !!value;
   }
+  el.maasOptions.hidden = !prefs.toplu.maas;
 }
 
 function savePrefs() {
@@ -244,6 +248,7 @@ for (const input of document.querySelectorAll('[data-opt]')) {
   input.addEventListener('change', () => {
     const [group, key] = input.dataset.opt.split('.');
     prefs[group][key] = input.type === 'radio' ? input.value : input.checked;
+    if (key === 'maas') el.maasOptions.hidden = !input.checked;
     savePrefs();
   });
 }
@@ -276,6 +281,11 @@ el.start.addEventListener('click', async () => {
 
   if (types.length === 0) {
     render({ state: 'error', label: 'En az bir haciz türü seçin' });
+    return;
+  }
+
+  if (types.includes('maas') && !el.maasStatus.value) {
+    render({ state: 'error', label: 'Maaş haczi için çalışma durumu seçin' });
     return;
   }
 
@@ -313,7 +323,9 @@ el.start.addEventListener('click', async () => {
       tabId: tab.id,
       types,
       paid: prefs.toplu.paid === true,
-      bankaTalep: prefs.toplu.bankaTalep
+      bankaTalep: prefs.toplu.bankaTalep,
+      maasStatus: types.includes('maas') ? el.maasStatus.value : '',
+      maasEmployer: types.includes('maas') ? el.maasEmployer.value.trim() : ''
     });
     if (!reply?.ok) render({ state: 'error', label: reply?.error || 'Başlatılamadı' });
   } catch (_) {

@@ -12,7 +12,8 @@
 // haciz türü tiki eski service worker'a hiç ulaşmıyor, toplu akış yine dört
 // türü de sorguluyordu. Sorgu hakları sayılı olduğu için bu numara ile popup,
 // arka planın kendi sürümüyle konuşup konuşmadığını çalıştırmadan önce anlar.
-const PROTOCOL = 3;
+const PROTOCOL = 4;
+const ALLOWED_TYPES = ['egm', 'icra', 'takbis', 'banka', 'maas'];
 
 const BANKS_KEY = 'ubh_banks';
 const PROGRESS_KEY = 'ubh_progress';
@@ -199,16 +200,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     case 'UBH_START':
       // Eksik veya eski arayüzden gelen tür listesiyle sorgu başlatma.
       if (!Array.isArray(message.types) || !message.types.some(type =>
-        ['egm', 'icra', 'takbis', 'banka'].includes(type))) {
+        ALLOWED_TYPES.includes(type))) {
         sendResponse({ ok: false, error: 'En az bir haciz türü seçin' });
         return false;
       }
       startRun(message.tabId, {
         // Çalışacak haciz türleri, ücret onayı ve banka talebinin evrak türü:
         // popup'ın verdiği kararlar. Evrak türü tanınmazsa öntanımlı 89/1'dir.
-        types: message.types.filter(type => ['egm', 'icra', 'takbis', 'banka'].includes(type)),
+        types: message.types.filter(type => ALLOWED_TYPES.includes(type)),
         paid: message.paid === true,
-        bankaTalep: message.bankaTalep === 'muzekkere' ? 'muzekkere' : 'ihbarname'
+        bankaTalep: message.bankaTalep === 'muzekkere' ? 'muzekkere' : 'ihbarname',
+        maasStatus: ['0', '1', '2', '3'].includes(message.maasStatus)
+          ? message.maasStatus : '',
+        maasEmployer: typeof message.maasEmployer === 'string'
+          ? message.maasEmployer.trim().slice(0, 200) : ''
       }).then(sendResponse);
       return true;
 

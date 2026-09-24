@@ -2,13 +2,16 @@
 //
 // MAHREMİYET: Bu betik yalnız aşağıdakileri okur:
 //   - düğme / sekme / seçenek etiketleri,
+//   - kullanıcı maaş haczini seçtiyse açık SSK çalışanı sonucundaki işyeri
+//     unvanı, vergi numarası ve aktiflik bilgisi (yalnız işlem süresince),
+//   - maaş talebindeki aracı kurum seçeneklerinin adları,
 //   - "No / Kurum" tablosundaki BANKA kurum adları (bütün sayfalar),
 //   - Banka Seç (bütün sayfalar) ve Hesap Seç listelerindeki satır adları,
 //   - sayfalayıcıdaki kayıt sayısı ve sayfa numaraları.
 // Ayrıca sorgu sonucunda "... kaydı yok" cümlesinin çıkıp çıkmadığını anlamak
 // için sayfa metninde YALNIZ o cümle kalıbı aranır; eşleşen cümle dışında
 // hiçbir alan okunmaz, hiçbir yere yazılmaz.
-// Dosya numarası, taraf adları, TCKN, hesap numarası ve bakiye hiçbir yerde
+// Dosya numarası, borçlu adı, TCKN, hesap numarası ve bakiye hiçbir yerde
 // okunmaz; ödeme ekranı hiç açılmaz. EGM, İcra Dosyası ve TAKBİS sonuç
 // tablolarından plaka, ada/parsel, dosya numarası gibi hiçbir alan okunmaz;
 // o tablolarda yalnız satırların ekleme düğmelerine basılır.
@@ -572,6 +575,13 @@
       input,
       button: editor.querySelector('.dx-dropdowneditor-button') || editor
     };
+  }
+
+  function findEditorByAriaId(id) {
+    const input = inRoot('input').find(el => el.getAttribute('aria-id') === id);
+    if (!input) return null;
+    const editor = input.closest('.dx-dropdowneditor, .dx-selectbox, .dx-texteditor');
+    return editor ? { input, button: editor.querySelector('.dx-dropdowneditor-button') || editor } : null;
   }
 
   async function waitFor(produce, timeoutMs, intervalMs = 120) {
@@ -1163,6 +1173,210 @@
     if (!await waitFor(() => findEditorByPlaceholder('Banka Seçiniz'), 15000)) {
       fail('Banka Seç alanı gelmedi');
     }
+  }
+
+  // SSK çalışanı sonuç tablosunda her işyeri için Vergi No ve Alt İş Yeri
+  // Ünvanı ardışık iki satırdır. Birden fazla farklı işyeri görünüyorsa seçim
+  // yapılmaz. Bu bilgiler eklenti depolamasına veya arka plana gönderilmez.
+  function visibleSgkEmployer(expectedName = '') {
+    const found = new Map();
+    for (const table of document.querySelectorAll('table')) {
+      if (!isVisible(table)) continue;
+      const rows = [...table.querySelectorAll('tr')].filter(isVisible);
+      const active = rows.some(row => {
+        const cells = [...row.cells];
+        return cells.length >= 4 && normalize(textOf(cells[2])) === 'DURUM' &&
+          normalize(textOf(cells[3])) === 'AKTİF';
+      });
+      if (!active) continue;
+
+      for (let i = 0; i + 1 < rows.length; i++) {
+        const cells = [...rows[i].cells];
+        const next = [...rows[i + 1].cells];
+        if (cells.length < 4 || next.length < 2 ||
+            normalize(textOf(cells[2])) !== 'VERGİ NO' ||
+            normalize(textOf(next[0])) !== 'ALT İŞ YERİ ÜNVANI') continue;
+        const taxNo = textOf(cells[3]).replace(/\s/g, '');
+        const name = textOf(next[1]);
+        if (!/^\d{10,11}$/.test(taxNo) || !name) continue;
+        found.set(`${taxNo}|${normalize(name)}`, { taxNo, name });
+      }
+    }
+    const matches = [...found.values()].filter(item =>
+      !expectedName || normalize(item.name) === normalize(expectedName));
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  const SALARY_STATUS = {
+    '0': 'Çalışan Kamu', '1': 'Çalışan Özel',
+    '2': 'Emekli Kamu', '3': 'Emekli Özel'
+  };
+
+  async function openSalaryForm() {
+    step('Maaş haczi formu açılıyor');
+    const tab = findTab('Talep Gönder');
+    if (!tab) fail('Talep Gönder sekmesi bulunamadı');
+    await waitForLoaderGone();
+    if (!tabSelected(tab)) tab.click();
+
+    const type = await waitFor(() => findEditorByPlaceholder('Talep Tipi Seçiniz'), 12000);
+    if (!type || !await openDropdownAndPick(type, 'Haciz Talepleri')) {
+      fail('Haciz Talepleri seçilemedi');
+    }
+    const kind = await waitFor(() => findEditorByPlaceholder('Talep Türü Seçiniz'), 12000);
+    if (!kind || !await openDropdownAndPick(kind, 'Maaş Haczi Talebi')) {
+      fail('Maaş Haczi Talebi seçilemedi');
+    }
+    if (!await waitFor(() => findEditorByAriaId('calismaDurumu'), 15000)) {
+      fail('Çalışma durumu alanı gelmedi');
+    }
+  }
+
+  async function chooseSalaryStatus(status) {
+    step('Çalışma durumu seçiliyor');
+    if (!SALARY_STATUS[status] || !await openDropdownAndPick(
+      findEditorByAriaId('calismaDurumu'), SALARY_STATUS[status]
+    )) fail('Çalışma durumu seçilemedi');
+    if (!await waitFor(() => normalize(findEditorByAriaId('calismaDurumu')?.input.value)
+        === normalize(SALARY_STATUS[status]), 3000)) fail('Çalışma durumu doğrulanamadı');
+  }
+
+  function setInputValue(input, value) {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: '0' }));
+  }
+
+  async function addEmployerFromSgk(employer) {
+    step('Kurum vergi numarasıyla aranıyor');
+    const add = findActionButton('Taraf Ekle');
+    if (!add) fail('Taraf Ekle düğmesi bulunamadı');
+    add.click();
+    const root = await waitFor(() => {
+      const el = document.querySelector('#taraf-ekle');
+      return isVisible(el) ? el : null;
+    }, 12000);
+    if (!root) fail('Kurum ekleme formu açılmadı');
+
+    const role = await waitFor(() => root.querySelector('#taraf-sifati'), 8000);
+    if (!role) fail('Taraf sıfatı alanı gelmedi');
+    if (!normalize(role.querySelector('input')?.value || textOf(role))
+        .includes('ARACI KİŞİ KURUM')) {
+      role.click();
+      const option = await waitFor(() => findOption('ARACI KİŞİ KURUM'), 5000);
+      if (!option) fail('Aracı kişi kurum sıfatı seçilemedi');
+      option.click();
+    }
+
+    const kurumuSec = await waitFor(() =>
+      [...root.querySelectorAll('#kisi-kurum [role="radio"]')]
+        .find(el => normalize(textOf(el)) === 'KURUM'), 8000);
+    if (!kurumuSec) fail('Kurum seçeneği bulunamadı');
+    kurumuSec.click();
+    const vknSec = await waitFor(() =>
+      [...root.querySelectorAll('#kurum-sorgu-tipi [role="radio"]')]
+        .find(el => normalize(textOf(el)) === 'VERGİ NO'), 8000);
+    if (!vknSec) fail('Vergi No seçeneği bulunamadı');
+    vknSec.click();
+
+    const input = await waitFor(() => root.querySelector('#vergiNo-txt'), 8000);
+    if (!input) fail('Vergi No alanı gelmedi');
+    setInputValue(input, employer.taxNo);
+    if (!await waitFor(() => input.value.replace(/\D/g, '') === employer.taxNo, 3000)) {
+      fail('Vergi numarası UYAP formuna yazılamadı');
+    }
+    const search = root.querySelector('#sorgula-kurum');
+    if (!search) fail('Kurum sorgula düğmesi bulunamadı');
+    search.click();
+
+    const confirmed = await waitFor(() => {
+      const buttons = [...root.querySelectorAll('button')].filter(isVisible)
+        .filter(el => textOf(el) === 'Taraf Ekle');
+      const result = normalize(textOf(root));
+      return buttons.length === 1 && result.includes(normalize(employer.name)) &&
+        result.includes(employer.taxNo) ? buttons[0] : null;
+    }, 20000);
+    if (!confirmed) fail('Vergi numarasıyla bulunan kurum SGK sonucuyla eşleşmedi');
+
+    step('Kurum dosyaya ekleniyor');
+    confirmed.click();
+    if (!await waitFor(() => !isVisible(root), 20000)) {
+      fail('Kurum eklenemedi; UYAP adres veya başka bilgi istiyor olabilir');
+    }
+    if (alertVisible()) dismissInfoAlert();
+  }
+
+  async function chooseSalaryEmployer(expectedName, employer) {
+    step('Maaş veren kurum seçiliyor');
+    const editor = await waitFor(() => findEditorByAriaId('maasVerenKurum'), 10000);
+    if (!editor) fail('Maaş veren kurum alanı gelmedi');
+    const desired = expectedName || employer?.name || '';
+    if (!desired) fail('SSK işyeri sonucu veya kurum adı gerekli');
+
+    const options = () => [...document.querySelectorAll('[role="option"]')]
+      .filter(isVisible).map(el => ({ el, name: textOf(el) }))
+      .filter(item => item.name);
+
+    async function pick(onlyNew = null) {
+      const current = findEditorByAriaId('maasVerenKurum');
+      current.button.click();
+      const option = await waitFor(() => {
+        const available = options();
+        const exact = available.filter(item => normalize(item.name) === normalize(desired));
+        if (exact.length === 1) return exact[0];
+        if (onlyNew) {
+          const added = available.filter(item => !onlyNew.has(normalize(item.name)));
+          if (added.length === 1) return added[0];
+        }
+        return null;
+      }, 3500);
+      if (!option) return false;
+      option.el.click();
+      return !!await waitFor(() => normalize(findEditorByAriaId('maasVerenKurum')?.input.value)
+        === normalize(option.name), 3000);
+    }
+
+    if (await pick()) return;
+    if (!employer) fail('Kurum dosyada bulunamadı; SSK sorgusu sonucunu açın');
+    const before = new Set(options().map(item => normalize(item.name)));
+    editor.button.click();
+    await addEmployerFromSgk(employer);
+    if (!await pick(before)) fail('Eklenen kurum Maaş Veren Kurum listesinde bulunamadı');
+  }
+
+  async function chooseSalaryQuarter() {
+    step('Maaşın 1/4’ü işaretleniyor');
+    const checkbox = await waitFor(() => inRoot('.dx-checkbox').find(el =>
+      normalize(textOf(el)).includes('MAAŞININ 1/4')), 8000);
+    if (!checkbox) fail('Maaşın 1/4’ü seçeneği bulunamadı');
+    if (!checkbox.classList.contains('dx-checkbox-checked') &&
+        checkbox.getAttribute('aria-checked') !== 'true') checkbox.click();
+    if (!await waitFor(() => checkbox.classList.contains('dx-checkbox-checked') ||
+        checkbox.getAttribute('aria-checked') === 'true', 3000)) {
+      fail('Maaşın 1/4’ü işaretlenemedi');
+    }
+  }
+
+  async function runSalary(status, expectedName, employer) {
+    await openSalaryForm();
+    await chooseSalaryStatus(status);
+    if (status === '0' || status === '1') await chooseSalaryEmployer(expectedName, employer);
+    await chooseSalaryQuarter();
+    step('Maaş talebi ekleniyor');
+    const add = findActionButton('Talep Ekle');
+    if (!add) fail('Talep Ekle düğmesi bulunamadı');
+    await waitForLoaderGone();
+    add.click();
+    // UYAP maaş formu başarılı eklemeden sonra çalışma durumunu boşaltır.
+    // Evrak düğmesi önceki taleplerden zaten var olabileceği için onu başarı
+    // kanıtı saymayız.
+    if (!await waitFor(() => {
+      const value = findEditorByAriaId('calismaDurumu')?.input.value || '';
+      return !value.trim();
+    }, 12000)) fail(alertMessage() || 'Maaş talebi eklenemedi');
+    return 1;
   }
 
   // --- Banka seçimi ---------------------------------------------------------
@@ -1836,15 +2050,15 @@
   //   - Sorgu bölümlerinde kayıtlar yalnız haciz talebine eklenir. Talep
   //     evrakı oluşturulmaz, evrak türü seçilmez, Talep Gönder sekmesine de
   //     geçilmez: hepsi en sondaki tek evrak adımında toplanır.
-  //   - Banka bölümü, seçim sırası ne olursa olsun DAİMA en son çalışır:
-  //     talep formunu o açar ve sorgu bölümlerinin eklediği kayıtlar da aynı
-  //     evrakta toplanır. Ödeme türü ve evrak türü girilmez.
+  //   - Banka bölümü sorgulardan sonra talep formunu açar. Maaş seçildiyse
+  //     onun ardından ayrı talep eklenir; bütün kayıtlar aynı evrakta toplanır.
+  //     Ödeme türü girilmez.
   //   - Akış her hâlükârda talep evrakı adımıyla biter.
   //   - Bir bölüm yarıda kalırsa akış durmaz: ekranda kalan kutu kapatılır,
   //     ne olduğu o bölümün satırına yazılır ve sıradaki bölüme geçilir.
 
   const BULK_QUERIES = ['egm', 'icra', 'takbis'];
-  const BULK_TYPES = [...BULK_QUERIES, 'banka'];
+  const BULK_TYPES = [...BULK_QUERIES, 'banka', 'maas'];
 
   // Bölüm satırları popup'ta ortak durum kutucuğunun altında ayrı bir liste
   // olarak görünür. Her satır bir cümleyle ne olduğunu söyler: kaç kayıt
@@ -1993,7 +2207,7 @@
     }
   }
 
-  async function runBulkFlow(allowPaid, types, bankaEvrak) {
+  async function runBulkFlow(allowPaid, types, bankaEvrak, salary) {
     // Eksik tür listesiyle sessizce dört sorgunun birden başlamasına izin verme.
     const chosen = Array.isArray(types)
       ? BULK_TYPES.filter(key => types.includes(key)) : [];
@@ -2003,11 +2217,24 @@
     // talep formunu açtığı için daima en sonda çalışmalıdır.
     const queries = BULK_QUERIES.filter(key => chosen.includes(key));
     const withBanka = chosen.includes('banka');
+    const withSalary = chosen.includes('maas');
+
+    if (withSalary && !SALARY_STATUS[salary.status]) {
+      fail('Maaş haczi için çalışma durumu seçin');
+    }
+    if (withSalary && (salary.status === '0' || salary.status === '1') &&
+        !salary.employer && !salary.expectedName) {
+      fail('SSK çalışanı sorgusunu açın veya maaş veren kurum adını yazın');
+    }
+    if (withSalary && salary.employer && salary.expectedName &&
+        normalize(salary.employer.name) !== normalize(salary.expectedName)) {
+      fail('Yazılan kurum adı SSK sonucu ile eşleşmiyor');
+    }
 
     // Her sorgu bölümü 4 adım (kart, sorgu, hazırlık, kayıt sayacı), banka
     // bölümü 11 adım. Evrak bölümü normalde 2 adımdır; banka bölümü Talep
     // Gönder ekranında bittiği için o sekmeyi açma adımı orada düşer.
-    stepTotal = queries.length * 4 + (withBanka ? 12 : 2);
+    stepTotal = queries.length * 4 + (withBanka ? 12 : 2) + (withSalary ? 7 : 0);
 
     let failed = 0;
 
@@ -2065,6 +2292,21 @@
       }
     }
 
+    if (withSalary) {
+      stage('maas', 'Maaş haczi', 'running', 'Hazırlanıyor');
+      try {
+        const added = await runSalary(salary.status, salary.expectedName, salary.employer);
+        prepared += added;
+        counts.push(`Maaş ${added}`);
+        stage('maas', 'Maaş haczi', 'done', 'Maaşın 1/4’ü için talep eklendi');
+      } catch (error) {
+        stage('maas', 'Maaş haczi', 'error', stopNote(error));
+        // Kurum ekleme formu veya UYAP uyarısı açıkken başka türlere ait
+        // evrakı oluşturmak eksik maaş talebini gizler; kullanıcıya bırak.
+        throw error;
+      }
+    }
+
     const evrak = await runBulkDocument(prepared);
     if (!evrak.ok) failed += 1;
 
@@ -2096,7 +2338,14 @@
       const bankaEvrak = options.bankaTalep === 'muzekkere'
         ? BANKA_EVRAK.muzekkere
         : BANKA_EVRAK.ihbarname;
-      const result = await runBulkFlow(options.paid === true, options.types, bankaEvrak);
+      const salary = {
+        status: options.maasStatus,
+        expectedName: typeof options.maasEmployer === 'string'
+          ? options.maasEmployer.trim() : '',
+        employer: Array.isArray(options.types) && options.types.includes('maas')
+          ? visibleSgkEmployer(options.maasEmployer || '') : null
+      };
+      const result = await runBulkFlow(options.paid === true, options.types, bankaEvrak, salary);
 
       send({ t: 'DONE', label: result.label, detail: result.detail });
     } catch (error) {
