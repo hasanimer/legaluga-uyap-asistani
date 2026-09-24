@@ -1,0 +1,565 @@
+/* UYAP Haciz Yardımcısı - popup teması */
+
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f4;
+  --border: #dde2e8;
+  --text: #1c2126;
+  --muted: #62707e;
+  --accent: #2f6fe0;
+  --accent-text: #ffffff;
+  --ok: #17915f;
+  --warn: #c2410c;
+  --shadow: 0 1px 2px rgba(28, 33, 38, .08), 0 8px 20px rgba(28, 33, 38, .07);
+}
+
+html[data-theme="dark"] {
+  --bg: #14181c;
+  --surface: #1c2126;
+  --surface-2: #232a31;
+  --border: #2e373f;
+  --text: #e4e9ed;
+  --muted: #8ca0b3;
+  --accent: #4b86e8;
+  --accent-text: #0f1317;
+  --ok: #3ec98d;
+  --warn: #f0955c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px rgba(0, 0, 0, .35);
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+/* max-width kalabalık bir sonuç listesi içindir. Genişlik yalnız 312 piksele
+   sabitken, içerik uzayıp dikey kaydırma çubuğu çıktığında gövde pencereye
+   sığmıyor ve alta bir de yatay kaydırma çubuğu ekleniyordu. max-width ile
+   gövde çubuğun bıraktığı yere çekilir; ölçüldü, yatay çubuk hiç çıkmıyor. */
+body {
+  width: 312px;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Başlık ------------------------------------------------------------- */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+
+.head__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  flex: none;
+}
+
+.head__back { text-decoration: none; font-size: 18px; line-height: 1; }
+
+.safety { margin: 8px 0; color: var(--muted); font-size: 11px; }
+
+.head__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -.01em;
+}
+
+.icon-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.ico-moon { display: none; }
+html[data-theme="dark"] .ico-sun { display: none; }
+html[data-theme="dark"] .ico-moon { display: inline; }
+
+/* --- Durum kutucuğu ----------------------------------------------------- */
+/* Çalışırken o an ne yapıldığını, bittiğinde sonucun özetini yazar. */
+
+.status {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 9px 11px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: background .2s, border-color .2s;
+}
+
+.status__dot {
+  flex: none;
+  margin-top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.status__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.status__text {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Bittiğinde sonucun özeti, takıldığında engelin nedeni, çalışırken de
+   sayfaya dokunmama uyarısı burada durur; okunabilir olmalı, bu yüzden
+   soluklaştırılmaz. */
+.status__detail {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.status__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--surface-2);
+}
+
+.status__bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+  transition: width .3s ease;
+}
+
+.status[data-state="running"] .status__dot {
+  background: var(--accent);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+.status[data-state="running"] .status__text { color: var(--text); }
+
+/* Bitmiş bir çalıştırma, sürmekte olandan bir bakışta ayrılsın: kutu yeşile
+   döner ve üstünde "SONUÇ" etiketi belirir. */
+.status[data-state="done"] {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+}
+
+.status[data-state="done"] .status__body::before {
+  content: "Sonuç";
+  display: block;
+  margin-bottom: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ok);
+}
+
+.status[data-state="done"] .status__dot { background: var(--ok); }
+.status[data-state="done"] .status__text { color: var(--ok); font-weight: 600; }
+.status[data-state="done"] .status__bar i { background: var(--ok); }
+
+.status[data-state="error"] {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+}
+
+.status[data-state="error"] .status__dot { background: var(--warn); }
+.status[data-state="error"] .status__text { color: var(--warn); font-weight: 600; }
+.status[data-state="error"] .status__bar i { background: var(--warn); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .25; }
+}
+
+/* --- Bölüm listesi ------------------------------------------------------- */
+/* Durum kutucuğu o an ne yapıldığını yazar; bu liste ise seçili bölümlerin
+   tek tek nasıl bittiğini gösterir ve çalıştırma boyunca ekranda kalır. */
+
+/* Yüksekliğin sınırlanması, popup’ın Chrome’daki 600 piksellik tavanını
+   aşmaması içindir. UYAP’ın kendi uyarı cümleleri uzun olabildiği için satır
+   notları iki üç satıra sarabiliyor; sınır olmasa bütün popup kaydırmalı hale
+   gelir ve düğmeler ekranın altında kalırdı. Dört satırın tek satırlık notlarla
+   kapladığı yer sınırın altındadır: olağan kullanımda çubuk hiç görünmez. */
+.stages {
+  margin: -4px 0 8px;
+  padding: 4px 0 0;
+  max-height: 192px;
+  overflow-y: auto;
+  list-style: none;
+  border-radius: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.stages::-webkit-scrollbar { width: 6px; }
+.stages::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+.stages::-webkit-scrollbar-track { background: transparent; }
+
+.stage {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 11px;
+}
+
+.stage__dot {
+  flex: none;
+  margin-top: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.stage__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.stage__name {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.stage__note {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--muted);
+  opacity: .85;
+  overflow-wrap: anywhere;
+}
+
+/* Bölüm yürüdüğü hâlde gözden geçirilmesi gereken satır: eşleşmediği için
+   atlanan kurum, banka sonucunun teyit hatırlatması. Notun aksine soluk
+   değildir ve uyarı rengini taşır; bölümün kendisi yeşil bitse de bu satır
+   göze çarpmalıdır. */
+.stage__warn {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--warn);
+  overflow-wrap: anywhere;
+}
+
+.stage[data-state="running"] .stage__dot {
+  background: var(--accent);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+.stage[data-state="running"] .stage__name { color: var(--text); }
+
+.stage[data-state="done"] .stage__dot { background: var(--ok); }
+.stage[data-state="done"] .stage__name { color: var(--ok); }
+
+.stage[data-state="error"] .stage__dot { background: var(--warn); }
+.stage[data-state="error"] .stage__name { color: var(--warn); font-weight: 600; }
+
+/* --- Yeni sorgu düğmesi -------------------------------------------------- */
+/* Biten bir çalıştırmanın özetini kaldırıp ekranı “Hazır”a döndürür. Yalnız
+   çalıştırma bittiğinde görünür; ana düğmeyle yarışmasın diye ikincil
+   görünümdedir. */
+
+.reset {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.reset:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.reset:active { transform: translateY(1px); }
+
+/* --- Toplu haciz bölümü -------------------------------------------------- */
+
+/* position: relative gizli onay kutusu girdilerini (.check input) kendi
+   satırlarında tutmak içindir. */
+.grp {
+  position: relative;
+  padding: 7px 9px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+/* Bilgi işareti kaldırıldıktan sonra başlıktan başka çocuğu kalmadı;
+   hizalayacak ikinci öğe olmadığı için yalnız boşluğu taşır. */
+.grp__head {
+  margin: 0 0 6px 1px;
+}
+
+/* Bölüm başlığının puntosu, altındaki "Banka talep türü" başlığıyla
+   ortaktır (bkz. .evrak__title): ikisi de aynı düzeyde başlıktır, farklı
+   punto ikisini birbirinin altı gibi gösteriyordu. */
+.grp__title {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.grp__opts { margin-top: 7px; }
+
+/* Haciz türleri: dördü de tikli gelir, tiki kalkan atlanır. Dar popup'ta alt
+   alta dört satır yer kapladığından iki sütuna dizilir. */
+.picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 8px;
+}
+
+.picks .check { margin-top: 5px; }
+.picks .check:nth-child(-n+2) { margin-top: 0; }
+
+/* Ücret onayı tür tiklerinden farklı bir karardır: ince bir çizgiyle ayrılır. */
+.check--sep {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+
+/* Banka talebinin evrak türü: iki seçenekten biri daima seçilidir. */
+/* Başlık, bölüm başlığıyla (.grp__title) aynı puntodadır; ikisi de kendi
+   seçenek kümesinin üstünde duran başlıktır. Büyük harf ve harf aralığı
+   yalnız bölüm başlığındadır: bu satır bir cümledir. */
+.evrak__title {
+  margin: 0 0 5px 1px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.check__box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: transparent;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+.check input:checked + .check__box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.check__label {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.check input:checked ~ .check__label { color: var(--text); }
+
+/* --- Ana düğme ---------------------------------------------------------- */
+/* Bölümün en altındadır: önce ne yapılacağı seçilir, sonra basılır. */
+
+.start {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  cursor: pointer;
+  transition: filter .15s, transform .05s;
+}
+
+.start:hover:not(:disabled) { filter: brightness(1.07); }
+.start:active:not(:disabled) { transform: translateY(1px); }
+
+.start:disabled {
+  opacity: .55;
+  cursor: default;
+  box-shadow: none;
+}
+
+/* --- Nasıl kullanılır --------------------------------------------------- */
+/* Bilgilendirme metni artık üzerine gelince açılan bir kutuda değil, tıklanınca
+   açılan bir bölümde durur. Bölüm sayfa akışının içindedir: açılınca popup
+   uzar, hiçbir şeyin üstünü örtmez ve imleç gezinirken kendiliğinden açılıp
+   kapanamaz. */
+
+.howto {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.howto__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  /* Üçgen işareti asıl kaldıran, yukarıdaki display: flex’tir: <summary>
+     varsayılan olarak list-item’dır ve üçgen o kutudan gelir. Bu satır
+     güvencedir: display bir gün list-item’a dönerse üçgen yine çıkmasın. */
+  list-style: none;
+  transition: color .15s, background .15s;
+
+  /* Üst köşeler kabın iç yuvarlatmasıyla (11px kenarlık - 1px) aynı olsun:
+     hem imleç üstündeyken arka plan düzgün yuvarlanır hem de odak halkası
+     .howto üzerindeki overflow: hidden kırpmasına takılmaz. */
+  border-radius: 10px 10px 0 0;
+}
+
+.howto__head:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.howto__head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.howto__caret {
+  flex: none;
+  color: var(--muted);
+  transition: transform .15s ease;
+}
+
+.howto[open] .howto__head { color: var(--text); }
+.howto[open] .howto__caret { transform: rotate(90deg); }
+
+.howto__body {
+  padding: 2px 10px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.howto__body b {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 10.5px;
+}
+
+.howto__body b:first-child { margin-top: 0; }
+
+.howto__body p { margin: 1px 0 0; }
+
+/* --- Alt satır ---------------------------------------------------------- */
+
+footer { margin-top: 8px; }
+
+/* Sürüm solda, geliştirici sağda: iki uç simetrik dursun. */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .02em;
+  opacity: .6;
+}
+
+/* “Geliştirici: x.com/CgrShn” tek satırda kalsın. */
+.foot__dev { white-space: nowrap; }
+
+.foot__link {
+  color: inherit;
+  text-decoration: none;
+  transition: color .15s, opacity .15s;
+}
+
+.foot__link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}

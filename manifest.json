@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Legaluga UYAP Asistanı",
   "short_name": "Legaluga UYAP",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "UYAP Avukat Portalı dosyalarınızı ad, soyad, dosya no veya mahkemeyle anında bulur, tek tıkla açar. Veriler yalnız cihazınızda.",
   "homepage_url": "https://legaluga.com",
   "icons": {
@@ -13,7 +13,9 @@
   },
   "permissions": [
     "storage",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "alarms",
+    "scripting"
   ],
   "host_permissions": [
     "https://avukat.uyap.gov.tr/*"

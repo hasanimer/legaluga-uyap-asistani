@@ -104,6 +104,7 @@ const ui = mountUI(document.getElementById('app'), {
   onOpen: openRecord,
   onOpenEvrak: openEvrak,
   onDosyaPanel: dosyaPanel,
+  onHaciz: () => { window.location.href = chrome.runtime.getURL('haciz/popup.html'); },
   onUpdate: update,
   onStop: stop
 });

@@ -39,6 +39,14 @@
 
 Dosyaları açık/kapalı ve yargı türüne göre süzebilir, aynı kişiye ait dosyaları bir arada görebilir, kendinize not ve süre hatırlatıcısı ekleyebilirsiniz.
 
+## Haciz yardımcısı
+
+İcra dosyasında takibi kesinleşmiş bir borçlu seçtiğinizde, eklenti penceresindeki **Haciz** düğmesiyle ayrı hazırlama ekranını açabilirsiniz. EGM, icra dosyası, TAKBİS ve banka türlerinden istediklerinizi seçip sorgu sonuçlarını haciz talebine ekleyebilirsiniz. Akış talep evrakını oluşturduğunda durur; **gönderme ve imza işlemi size aittir**.
+
+Haciz yardımcısı **1.9.0** sürümündedir. Chrome Web Mağazası'nda daha eski bir sürüm görünüyorsa bu özellik için kaynak koddan kurulum gerekir.
+
+Ücretli sorgu onayı başlangıçta kapalıdır. Seçimlerinizi, UYAP'ın uyarılarını ve oluşturulan evrakı işlemden önce kontrol edin. Haciz modülü [Çağrı Şahin'in MIT lisanslı UYAP Haciz Yardımcısı](https://github.com/SCgrS/UYAP-Haciz-Yardimcisi) projesinden uyarlanmıştır; [özgün lisans bildirimi](haciz/LICENSE) korunmuştur.
+
 ## Kurulum
 
 1. **[Chrome Web Mağazası'nda aç →](https://chromewebstore.google.com/detail/legaluga-uyap-asistan%C4%B1/aicknihmpdcbfgidifffinnbgbghkmcn?hl=tr)** bağlantısına gidip **Chrome'a ekle**'ye basın.

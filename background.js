@@ -2,6 +2,9 @@
 // (content.js) onu kaldığı yerden devralır. Kapanan sayfa bunu kendisi her zaman yazamıyor.
 // Ağ isteği yapmaz, veri okumaz; yalnız hangi sekmenin güncellemeyi yürüttüğünü (sekme numarası) tutar.
 
+// MIT lisanslı UYAP Haciz Yardımcısı'nın isteğe bağlı haciz hazırlama akışı.
+importScripts('haciz/background.js');
+
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg && msg.type === 'uhd-owner' && sender.tab) {
     chrome.storage.session.set({ uhdOwnerTab: { tabId: sender.tab.id, owner: msg.owner } });
