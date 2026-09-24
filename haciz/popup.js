@@ -13,6 +13,11 @@ const PROTOCOL = 4;
 const PROGRESS_KEY = 'ubh_progress';
 const PREFS_KEY = 'ubh_prefs';
 const UYAP_PREFIX = 'https://avukat.uyap.gov.tr/';
+const sourceTabId = new URLSearchParams(window.location.search).get('tabId');
+if (sourceTabId !== null) {
+  document.documentElement.dataset.window = 'true';
+  document.getElementById('back-search').href = '../popup.html' + window.location.search;
+}
 
 // Toplu akışta çalışabilecek haciz türleri. Sıra burada değil sayfa tarafında
 // belirlenir: banka sorgulardan sonra, maaş talebi onun ardından çalışır.
@@ -282,6 +287,13 @@ for (const input of document.querySelectorAll('[data-opt]')) {
 // Etkin sekme popup içinden bulunur: service worker'ın kendine ait bir
 // pencere bağlamı yoktur, orada "currentWindow" güvenilir değildir.
 async function activeUyapTab() {
+  if (sourceTabId !== null) {
+    if (!/^\d+$/.test(sourceTabId) || !Number.isSafeInteger(Number(sourceTabId))) return null;
+    try {
+      const source = await chrome.tabs.get(Number(sourceTabId));
+      return source.url?.startsWith(UYAP_PREFIX) ? source : null;
+    } catch { return null; }
+  }
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return null;
   // "tabs" izni olmadığından host izni dışındaki sekmelerde tab.url boş gelir;
@@ -327,7 +339,9 @@ el.start.addEventListener('click', async () => {
     const tab = await activeUyapTab();
 
     if (!tab) {
-      render({ state: 'error', label: 'UYAP Avukat Portalı sekmesi bulunamadı' });
+      render({ state: 'error', label: sourceTabId !== null
+        ? 'Bu pencerenin bağlı olduğu UYAP sekmesi kapalı veya başka sayfaya geçmiş'
+        : 'UYAP Avukat Portalı sekmesi bulunamadı' });
       return;
     }
 

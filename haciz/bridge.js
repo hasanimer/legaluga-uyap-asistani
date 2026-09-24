@@ -33,7 +33,9 @@
         t: 'START',
         types: message.types,
         paid: message.paid,
-        bankaTalep: message.bankaTalep
+        bankaTalep: message.bankaTalep,
+        maasStatus: message.maasStatus,
+        maasEmployer: message.maasEmployer
       });
     }
   });

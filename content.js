@@ -938,6 +938,7 @@
       onOpen: r => openFile(r),
       onOpenEvrak: (r, k) => openEvrak(r, k),
       onDosyaPanel: (r, tab) => openDosyaPanel(r, tab),
+      onHaciz: openHaciz,
       onUpdate: async full => {
         const res = await startUpdate(full);
         if (!res.ok) ui.setNotice(res.error, 'err');
@@ -956,6 +957,19 @@
   }
 
   function hidePanel() { if (panel) panel.hidden = true; }
+
+  async function openHaciz() {
+    try {
+      const result = await chrome.runtime.sendMessage({ type: 'uhd-haciz-open' });
+      if (!result?.ok) {
+        ui.setNotice(result?.error || 'Haciz ekranı açılamadı. Eklentiyi yenileyip tekrar deneyin.', 'err');
+        return;
+      }
+      hidePanel();
+    } catch {
+      ui.setNotice('Haciz ekranı açılamadı. Eklentiyi ve UYAP sekmesini yenileyip tekrar deneyin.', 'err');
+    }
+  }
 
   // ---------------------------------------------------------------- Evrakı açma
   // Evrak kimlikleri her yanıtta yeniden şifrelendiği için saklanmaz: açarken dosyanın evrak listesi yeniden

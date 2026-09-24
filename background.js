@@ -5,7 +5,24 @@
 // MIT lisanslı UYAP Haciz Yardımcısı'nın isteğe bağlı haciz hazırlama akışı.
 importScripts('haciz/background.js');
 
-chrome.runtime.onMessage.addListener((msg, sender) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg?.type === 'uhd-haciz-open') {
+    const tab = sender.tab;
+    if (!Number.isInteger(tab?.id) || !tab.url?.startsWith('https://avukat.uyap.gov.tr/')) {
+      sendResponse({ ok: false, error: 'Haciz ekranını UYAP sekmesindeki panelden açın.' });
+      return false;
+    }
+    // Ayrı pencere açıldığında etkin sekme değişir; işlemi kaynak UYAP
+    // sekmesine bağlayarak başka dosyada başlamasını önle.
+    chrome.windows.create({
+      url: chrome.runtime.getURL('haciz/popup.html') + '?tabId=' + tab.id,
+      type: 'popup', width: 500, height: 700, focused: true
+    }).then(
+      opened => sendResponse({ ok: Number.isInteger(opened?.id) }),
+      () => sendResponse({ ok: false, error: 'Haciz penceresi açılamadı. Tekrar deneyin.' })
+    );
+    return true;
+  }
   if (msg && msg.type === 'uhd-owner' && sender.tab) {
     chrome.storage.session.set({ uhdOwnerTab: { tabId: sender.tab.id, owner: msg.owner } });
   }
