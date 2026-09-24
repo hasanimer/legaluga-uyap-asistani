@@ -1352,25 +1352,16 @@
   resumeInterval = setInterval(() => scheduled(() => maybeResume(false)), 20000);
   setTimeout(() => scheduled(() => maybeResume(true)), 1500);
 
-  // UYAP açılınca bu sekmede günde bir kez: bugünkü duruşmalar ve son günü 3 gün ya da daha az kalan süreler.
-  chrome.storage.local.get(['uhdSureler', 'uhdDurusmalar']).then(({ uhdSureler, uhdDurusmalar }) => {
-    const { activeSureler, daysLeft, todayIso, upcomingDurusmalar } = globalThis.UHD;
+  // UYAP açılınca bu sekmede günde bir kez bugünkü duruşmaları göster.
+  chrome.storage.local.get('uhdDurusmalar').then(({ uhdDurusmalar }) => {
+    const { todayIso, upcomingDurusmalar } = globalThis.UHD;
     if (ssGet('legalugaHatirlatma') === todayIso()) return;
-    const yakin = activeSureler(uhdSureler).filter(s => daysLeft(s.bitis) <= 3);
     const bugun = upcomingDurusmalar(uhdDurusmalar && uhdDurusmalar.list).filter(d => d.tarih === todayIso());
-    if (!yakin.length && !bugun.length) return;
+    if (!bugun.length) return;
     ssSet('legalugaHatirlatma', todayIso());
-    const lines = [];
-    if (bugun.length) {
-      lines.push(`Bugün ${bugun.length} duruşma: ` + bugun.slice(0, 3).map(d => `${d.saat} ${d.dosyaNo}`).join(', ') + (bugun.length > 3 ? ' …' : ''));
-    }
-    if (yakin.length) {
-      const s = yakin[0], d = daysLeft(s.bitis);
-      const kalan = d < 0 ? `${-d} gün geçti` : d === 0 ? 'bugün son gün' : d === 1 ? 'yarın son gün' : `${d} gün kaldı`;
-      lines.push(`${yakin.length > 1 ? `Süresi yaklaşan ${yakin.length} iş; en yakını: ` : 'Süre yaklaşıyor: '}${s.dosyaNo} · ${s.baslik || 'Süre'} — ${kalan}`);
-    }
-    toast(lines.join('\n'), yakin.length ? 'err' : 'ok', 0, {
-      label: 'Göster', fn: () => { panel.hidden = false; yakin.length ? ui.showSureler() : ui.showDurusmalar(); }
+    const text = `Bugün ${bugun.length} duruşma: ` + bugun.slice(0, 3).map(d => `${d.saat} ${d.dosyaNo}`).join(', ') + (bugun.length > 3 ? ' …' : '');
+    toast(text, 'ok', 0, {
+      label: 'Göster', fn: () => { panel.hidden = false; ui.showDurusmalar(); }
     });
   });
 

@@ -37,7 +37,7 @@
 | :---: | :---: |
 | <img src="assets/filtreler.png" alt="Dosya filtreleri ve notlar" width="100%"> | <img src="assets/gizlilik.png" alt="Yerel veri saklama ayarları" width="100%"> |
 
-Dosyaları açık/kapalı ve yargı türüne göre süzebilir, aynı kişiye ait dosyaları bir arada görebilir, kendinize not ve süre hatırlatıcısı ekleyebilirsiniz.
+Dosyaları açık/kapalı ve yargı türüne göre süzebilir, aynı kişiye ait dosyaları bir arada görebilir, kendinize not ekleyebilirsiniz.
 
 ## Kurulum
 
@@ -68,4 +68,4 @@ Chrome eklentiyi bu klasörden çalıştırır; klasörü sonradan silmeyin veya
 
 Kaynak kodu [MIT lisansıyla](LICENSE) yayımlanır. Hata ve öneriler için [issue açabilirsiniz](https://github.com/hasanimer/legaluga-uyap-asistani/issues). Güvenlik açıklarını [özel bildirim kanalı üzerinden](SECURITY.md) iletin.
 
-Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve T.C. Adalet Bakanlığı veya UYAP'ın resmî ürünü değildir. Süre hatırlatıcısında tarih ve süreyi siz girersiniz; önerilen son günü ve duruşma bilgilerini UYAP üzerinden doğrulayın.
+Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve T.C. Adalet Bakanlığı veya UYAP'ın resmî ürünü değildir. Duruşma bilgilerini UYAP üzerinden doğrulayın.

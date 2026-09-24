@@ -1,8 +1,7 @@
 // Arama arayüzü: hem eklenti popup'ında hem UYAP sayfasındaki yan panelde aynı kod kullanılır.
 (() => {
   if (globalThis.UHD.mountUI) return;
-  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs, lastEvrak, personFiles, trTitle, cleanDurum, cleanBirim, evrakTakipAcik, BACKUP_APP, BACKUP_FORMAT, BACKUP_KEYS, checkBackup, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, upcomingDurusmalar, durusmaIcs, evrakKey } = globalThis.UHD;
-  const SURE_UYAR_GUN = 7;   // bu kadar gün ya da daha az kalan süreler panelde uyarılır
+  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs, lastEvrak, personFiles, trTitle, cleanDurum, cleanBirim, evrakTakipAcik, BACKUP_APP, BACKUP_FORMAT, BACKUP_KEYS, checkBackup, todayIso, daysLeft, upcomingDurusmalar, durusmaIcs, evrakKey } = globalThis.UHD;
   const EVRAK_SHOW = 3;
   const LIMIT = 60;
   const RECENT_MAX = 10;
@@ -15,14 +14,14 @@
   --bg:#f5f7fb;--card:#fff;--text:#1d2939;--text2:#344054;--muted:#667085;--line:#e3e8f2;--line2:#cfd6e4;
   --green:#12805c;--green-bg:#e7f6ef;--grey:#98a2b3;--grey-bg:#eef0f3;--amber:#b54708;--amber-bg:#fef0c7;--red:#b42318;
   --note-bg:#fffbea;--note-bd:#f2c94c;--ev-bg:#f0f5ff;--ev-bd:#528bff;--ev-tx:#1849a9;--warn-bg:#fff4e5;--warn-tx:#7a4b00;
-  --err-bg:#fdecea;--err-tx:#8a1f17;--mark:#ffe58a;--hot-bg:#fdecea;--warm-bg:#fff6e8;
+  --err-bg:#fdecea;--err-tx:#8a1f17;--mark:#ffe58a;
   font:13px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg);
   display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;color-scheme:light}
 .uhd[data-theme=dark]{--soft:#143532;--bord:#2f6f69;
   --bg:#0f1720;--card:#18222d;--text:#e6edf3;--text2:#c9d3de;--muted:#98a2b3;--line:#2a3644;--line2:#3a4756;
   --green:#4fd1a5;--green-bg:#0f2e25;--grey:#667085;--grey-bg:#25303c;--amber:#f5b04c;--amber-bg:#33260f;--red:#f97066;
   --note-bg:#2b2716;--note-bd:#b38f1f;--ev-bg:#16233a;--ev-bd:#528bff;--ev-tx:#9ec1ff;--warn-bg:#33270f;--warn-tx:#f5c26b;
-  --err-bg:#3a1714;--err-tx:#f7a8a1;--mark:#6b5a12;--hot-bg:#3a1714;--warm-bg:#33260f;color-scheme:dark}
+  --err-bg:#3a1714;--err-tx:#f7a8a1;--mark:#6b5a12;color-scheme:dark}
 .uhd[data-theme=dark] :is(.onboard b,.ib:hover,.ib.on,.pmore,.pname:hover,.lnk:hover,.rolein,.dayhead,.durrow .t,.tag){color:#7fd6cc}
 .uhd *{box-sizing:border-box}
 .uhd [hidden]{display:none!important}
@@ -50,8 +49,6 @@
 .uhd .chip.client.on{background:var(--deep);border-color:var(--deep)}
 .uhd .chip.new{border-color:var(--ev-bd);color:var(--ev-tx)}
 .uhd .chip.new.on{background:#1849a9;border-color:#1849a9;color:#fff}
-.uhd .chip.sure{border-color:#f4b4ad;color:var(--red)}
-.uhd .chip.sure.on{background:#b42318;border-color:#b42318;color:#fff}
 .uhd .chip.dur.on{background:var(--text2);border-color:var(--text2);color:var(--card)}
 .uhd .sep{width:1px;height:16px;background:var(--line2);margin:0 2px}
 .uhd .notice{margin:8px 10px 0;padding:8px 10px;border-radius:8px;background:var(--warn-bg);color:var(--warn-tx);font-size:12px;display:flex;gap:8px;align-items:center}
@@ -127,22 +124,6 @@
 .uhd .evrak li small{color:var(--muted)}
 .uhd .lnk{border:1px solid var(--line2);background:var(--card);color:var(--text2);border-radius:5px;padding:0 6px;font-size:11px;cursor:pointer;margin-left:4px;vertical-align:1px}
 .uhd .lnk:hover{border-color:var(--focus);color:var(--navy)}
-.uhd .sure{margin-top:6px;padding:5px 8px;border-left:3px solid var(--grey);background:var(--bg);border-radius:0 6px 6px 0;font-size:12px;cursor:default}
-.uhd .sure.warm{border-left-color:#f79009;background:var(--warm-bg)}
-.uhd .sure.hot{border-left-color:#d92d20;background:var(--hot-bg)}
-.uhd .sure .line{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.uhd .sure .left{font-weight:600}
-.uhd .sure.hot .left{color:var(--red)}
-.uhd .sure.warm .left{color:var(--amber)}
-.uhd .sure .acts2{margin-left:auto;display:flex;gap:4px}
-.uhd .sure-form{margin-top:6px;padding:8px;border:1px solid var(--line2);border-radius:8px;background:var(--card);font-size:12px;cursor:default}
-.uhd .sure-form .g{display:grid;grid-template-columns:auto 1fr;gap:6px 8px;align-items:center}
-.uhd .sure-form input,.uhd .sure-form select{border:1px solid var(--line2);border-radius:6px;padding:4px 6px;font:inherit;min-width:0;background:var(--card);color:var(--text)}
-.uhd .sure-form .per{display:flex;gap:6px}
-.uhd .sure-form .per input{width:60px}
-.uhd .sure-form .w{margin-top:6px;color:var(--warn-tx)}
-.uhd .sure-form .h{margin-top:6px;color:var(--muted);font-size:11px}
-.uhd .sure-form .b{display:flex;gap:8px;margin-top:8px}
 .uhd .person,.uhd .durhead{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--text2)}
 .uhd .person .top{display:flex;align-items:center;gap:8px}
 .uhd .person .top b{font-size:15px;color:var(--deep);flex:1}
@@ -193,7 +174,6 @@
   const ICONS = {
     copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
     note: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
-    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     hide: '<path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10 10 0 0 1 12 4c7 0 10 8 10 8a17 17 0 0 1-3.2 4.3"/><path d="M6.6 6.6C3.8 8.4 2 12 2 12s3 8 10 8a9.7 9.7 0 0 0 5.4-1.6"/>',
     eye: '<path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     down: '<path d="M6 9l6 6 6-6"/>',
@@ -296,15 +276,12 @@
     let allParties = new Set();// tüm tarafları gösterilen kartlar
     let pendingJob = null;     // yarıda kalmış güncelleme işi (uhdJob)
     let person = null;         // açık müvekkil kartı: { name }
-    let sureler = {};          // süre hatırlatmaları (uhdSureler): { id: { id, key, dosyaNo, birimAdi, baslik, baslangic, n, unit, bitis, done } }
-    let sureMap = new Map();   // kayıt key → en yakın son gün
-    let sureEdit = null;       // açık süre formu: { key, baslangic, kaynak }
     let durusmaMeta = null;    // uhdDurusmalar: { at, gun, list }
     let durusmaByKey = new Map(); // kayıt key → yaklaşan duruşmalar (sıralı)
     let yeniMap = new Map();   // kayıt key → en yeni görülmemiş evrakın onay zamanı
     let yeniCount = 0;         // görülmemiş yeni evrak sayısı
     let evrakTracked = false;  // en az bir dosyanın evrakları tarandı mı
-    const filter = { durum: 'all', tur: 'all', onlyClient: false, onlyNew: false, onlySure: false, onlyDurusma: false };
+    const filter = { durum: 'all', tur: 'all', onlyClient: false, onlyNew: false, onlyDurusma: false };
 
     // Tema: ayar "auto" ise sistemin açık/koyu tercihine uyar.
     const darkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
@@ -365,13 +342,6 @@
 
     function autoNotice() {
       if (manualNotice) return;
-      const yakin = activeSureler(sureler).filter(s => daysLeft(s.bitis) <= SURE_UYAR_GUN);
-      if (records.length && yakin.length && !filter.onlySure) {
-        const s = yakin[0];
-        return showNotice(`${yakin.length > 1 ? `${yakin.length} süre yaklaşıyor. En yakını: ` : 'Süre yaklaşıyor: '}${s.dosyaNo} · ${s.baslik || 'Süre'} — ${kalanText(daysLeft(s.bitis))}.`, 'err', {
-          label: 'Göster', fn: () => showSureler()
-        });
-      }
       const yakinDur = upcomingDurusmalar(durusmaMeta && durusmaMeta.list).filter(d => daysLeft(d.tarih) <= 1);
       if (records.length && yakinDur.length && !filter.onlyDurusma) {
         const bugun = yakinDur.filter(d => daysLeft(d.tarih) === 0);
@@ -408,10 +378,9 @@
       null,
       { group: 'onlyClient', v: true, label: 'Müvekkil', title: 'Yalnızca müvekkil adlarında ara', cls: 'client' },
       { row: 2, group: 'onlyDurusma', v: true, label: 'Duruşmalar', title: 'Son güncellemede UYAP’tan alınan yaklaşan duruşmalar, günlere göre', cls: 'dur' },
-      { row: 2, group: 'onlySure', v: true, label: 'Süreler', title: 'Süre hatırlatması eklediğiniz dosyalar, son günü en yakın olan önce', cls: 'sure' },
       { row: 2, group: 'onlyNew', v: true, label: 'Yeni Evrak', title: 'Güncellemelerde yeni evrak gelen ve henüz “Görüldü” demediğiniz dosyalar', cls: 'new' }
     ];
-    const TOGGLES = ['onlyClient', 'onlyNew', 'onlySure', 'onlyDurusma'];
+    const TOGGLES = ['onlyClient', 'onlyNew', 'onlyDurusma'];
     function clearFilters() {
       filter.durum = 'all'; filter.tur = 'all';
       for (const k of TOGGLES) filter[k] = false;
@@ -424,11 +393,9 @@
       for (const c of CHIPS) {
         if (!c) { row1.append(el('span', { class: 'sep' })); continue; }
         if (c.group === 'onlyNew' && !evrakTracked) continue;
-        if (c.group === 'onlySure' && !sureMap.size && !filter.onlySure) continue;
         if (c.group === 'onlyDurusma' && !durusmaMeta) continue;
         const on = filter[c.group] === c.v;
         const label = c.group === 'onlyNew' && yeniMap.size ? `${c.label} (${fmtNum(yeniMap.size)})`
-          : c.group === 'onlySure' && sureMap.size ? `${c.label} (${fmtNum(sureMap.size)})`
           : c.group === 'onlyDurusma' ? `${c.label} (${fmtNum(upcomingDurusmalar(durusmaMeta.list).length)})` : c.label;
         const b = el('button', { class: 'chip' + (c.cls ? ' ' + c.cls : '') + (on ? ' on' : ''), title: c.title || null, 'aria-pressed': String(on) }, label);
         b.addEventListener('click', () => {
@@ -437,7 +404,7 @@
             return;
           }
           filter[c.group] = on ? (TOGGLES.includes(c.group) ? false : 'all') : c.v;
-          if (c.row === 2 && !on) for (const k of ['onlyNew', 'onlySure', 'onlyDurusma']) if (k !== c.group) filter[k] = false;
+          if (c.row === 2 && !on) for (const k of ['onlyNew', 'onlyDurusma']) if (k !== c.group) filter[k] = false;
           if (c.group === 'onlyDurusma') person = null;
           sel = 0;
           renderFilters();
@@ -559,7 +526,6 @@
         return el('li', { title: [y.tur, tarih, y.gonderen, evrakDosya(r, y.dosya), y.aciklama].filter(Boolean).join('\n') },
           el('b', null, y.tur || 'Evrak'), ' · ', tarih,
           ' ', evrakOpenBtn(r, y.k),
-          isTebligat(y.tur) ? [' ', sureLink(r, y)] : null,
           alt ? el('div', null, el('small', null, highlight(alt, toks))) : null);
       });
       if (u.length > EVRAK_SHOW) lines.push(el('li', null, el('small', null, `+${u.length - EVRAK_SHOW} evrak daha`)));
@@ -593,8 +559,7 @@
       const s = lastEvrak(r);
       const title = s.gonderim && s.gonderim !== s.onay ? `Onay ${s.onay}, sisteme gönderim ${s.gonderim}` : `Onay ${s.onay}`;
       return el('div', { class: 'son', title: 'Dosyadaki en yeni evrak (son güncellemeye göre). ' + title }, el('span', { class: 'k' }, 'Son evrak: '), el('b', null, s.onay), t.slice(s.onay.length),
-        s.k ? [' ', evrakOpenBtn(r, s.k)] : null,
-        isTebligat(s.tur) ? [' ', sureLink(r, s)] : null);
+        s.k ? [' ', evrakOpenBtn(r, s.k)] : null);
     }
 
     // ------------------------------------------------ evrak açma ve duruşmalar
@@ -691,140 +656,12 @@
       if (sel >= current.length) sel = 0;
     }
 
-    // ------------------------------------------------ süre hatırlatıcı
-
     const GUNLER = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
     function fmtIso(iso, withDay) {
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
       if (!m) return '';
       const s = `${m[3]}.${m[2]}.${m[1]}`;
       return withDay ? `${s} ${GUNLER[new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay()]}` : s;
-    }
-    function kalanText(d) {
-      if (d == null) return '';
-      if (d < 0) return `${-d} gün geçti`;
-      if (d === 0) return 'bugün son gün';
-      if (d === 1) return 'yarın son gün';
-      return `${d} gün kaldı`;
-    }
-
-    function computeSure() {
-      sureMap = new Map();
-      for (const s of activeSureler(sureler)) if (!sureMap.has(s.key)) sureMap.set(s.key, s.bitis);
-      if (!sureMap.size) filter.onlySure = false;
-    }
-
-    function showSureler() {
-      person = null;
-      filter.onlySure = true;
-      sel = 0;
-      renderFilters();
-      render();
-      autoNotice();
-    }
-
-    function openSureForm(r, baslangic, kaynak) {
-      sureEdit = { key: r.key, baslangic: baslangic || '', kaynak: kaynak || '' };
-      editing = null;
-      render();
-    }
-
-    function sureBtn(r) {
-      const b = el('button', { class: 'ib', title: 'Süre hatırlatması ekle (ör. istinaf, cevap dilekçesi)', 'aria-label': 'Süre hatırlatması ekle' }, icon('clock'));
-      b.addEventListener('click', e => { e.stopPropagation(); openSureForm(r); });
-      return b;
-    }
-
-    // Tebligat evrakından süre formu: başlangıç olarak evrakın onay tarihi önerilir (kontrol edilmek üzere).
-    function sureLink(r, y) {
-      const b = el('button', { class: 'lnk', title: 'Bu tebligat için süre hatırlatması ekleyin' }, 'Süre ekle');
-      b.addEventListener('click', e => { e.stopPropagation(); openSureForm(r, trToIso(y.onay), `${y.tur} · onay ${y.onay}`); });
-      return b;
-    }
-
-    async function saveSureler(next) {
-      sureler = next;
-      computeSure();
-      renderFilters();
-      render();
-      autoNotice();
-      await chrome.storage.local.set({ uhdSureler: next });
-    }
-
-    function sureForm(r) {
-      const stop = e => e.stopPropagation();
-      const baslik = el('input', { type: 'text', placeholder: 'Örn. İstinaf, cevap dilekçesi', maxlength: '80' });
-      const bas = el('input', { type: 'date', value: sureEdit.baslangic || todayIso() });
-      const n = el('input', { type: 'number', min: '1', max: '999', value: '2' });
-      const unit = el('select', null, ['gün', 'hafta', 'ay'].map(u => el('option', { value: u, selected: u === 'hafta' }, u)));
-      const son = el('input', { type: 'date' });
-      const warn = el('div', { class: 'w' });
-      let auto = true;
-      const upd = () => {
-        if (auto) son.value = addPeriod(bas.value, n.value, unit.value);
-        const d = daysLeft(son.value);
-        warn.replaceChildren(...[
-          son.value ? `Son gün: ${fmtIso(son.value, true)} (${kalanText(d)}).` : 'Son günü girin.',
-          ...sureUyarilari(son.value)
-        ].map(t => el('div', null, t)));
-      };
-      [bas, n, unit].forEach(x => x.addEventListener('input', upd));
-      son.addEventListener('input', () => { auto = false; upd(); });
-      const save = el('button', { class: 'btn sm primary' }, 'Kaydet');
-      const cancel = el('button', { class: 'btn sm' }, 'Vazgeç');
-      save.addEventListener('click', () => {
-        if (!son.value) { son.focus(); return; }
-        const id = Math.random().toString(36).slice(2);
-        sureEdit = null;
-        saveSureler({ ...sureler, [id]: {
-          id, key: r.key, dosyaNo: r.dosyaNo, birimAdi: r.birimAdi, baslik: baslik.value.trim(),
-          baslangic: bas.value, n: Number(n.value) || null, unit: unit.value, bitis: son.value, kaynak: '', createdAt: Date.now()
-        } });
-      });
-      cancel.addEventListener('click', () => { sureEdit = null; render(); });
-      const box = el('div', { class: 'sure-form', onclick: stop },
-        el('div', { class: 'g' },
-          el('span', null, 'Açıklama'), baslik,
-          el('span', null, 'Tebliğ / başlangıç'), bas,
-          el('span', null, 'Süre'), el('div', { class: 'per' }, n, unit),
-          el('span', null, 'Son gün'), son),
-        warn,
-        sureEdit.kaynak ? el('div', { class: 'h' }, `Başlangıç, evrakın onay tarihinden önerildi (${sureEdit.kaynak}); tebliğ tarihi farklı olabilir.`) : null,
-        el('div', { class: 'h' }, 'Süreyi ve tebliğ tarihini kendiniz kontrol edin. E-tebligatta tebliğ, adrese ulaştığı günü izleyen 5. günün sonunda yapılmış sayılır. Son gün yalnız takvimle önerilir; resmî tatiller ve adli tatil uzaması uygulanmaz, son günü elle düzeltebilirsiniz.'),
-        el('div', { class: 'b' }, save, cancel));
-      box.addEventListener('keydown', e => {
-        e.stopPropagation();
-        if (e.key === 'Escape') { sureEdit = null; render(); input.focus(); }
-        else if (e.key === 'Enter' && e.target.tagName !== 'SELECT') { e.preventDefault(); save.click(); }
-      });
-      upd();
-      setTimeout(() => baslik.focus(), 0);
-      return box;
-    }
-
-    function sureBlock(r) {
-      if (sureEdit && sureEdit.key === r.key) return sureForm(r);
-      const mine = activeSureler(sureler).filter(s => s.key === r.key);
-      if (!mine.length) return null;
-      return mine.map(s => {
-        const d = daysLeft(s.bitis);
-        const done = el('button', { class: 'btn sm', title: 'İş yapıldı; hatırlatmayı kapat' }, icon('check'), 'Tamamlandı');
-        done.addEventListener('click', e => { e.stopPropagation(); saveSureler({ ...sureler, [s.id]: { ...s, done: true, doneAt: Date.now() } }); });
-        const del = el('button', { class: 'ib', title: 'Hatırlatmayı sil', 'aria-label': 'Hatırlatmayı sil' }, icon('x'));
-        del.addEventListener('click', e => {
-          e.stopPropagation();
-          const next = { ...sureler };
-          delete next[s.id];
-          saveSureler(next);
-        });
-        const detay = [s.baslangic ? `Başlangıç ${fmtIso(s.baslangic)}` : '', s.n ? `${s.n} ${s.unit}` : ''].filter(Boolean).join(' · ');
-        return el('div', { class: 'sure' + (d <= 3 ? ' hot' : d <= SURE_UYAR_GUN ? ' warm' : ''), onclick: e => e.stopPropagation(), title: detay || null },
-          el('div', { class: 'line' },
-            el('b', null, s.baslik || 'Süre'),
-            el('span', null, `son gün ${fmtIso(s.bitis, true)}`),
-            el('span', { class: 'left' }, kalanText(d)),
-            el('span', { class: 'acts2' }, done, del)));
-      });
     }
 
     // Durum rengi: açık yeşil, kapalı gri, karara çıkmış turuncu.
@@ -871,7 +708,6 @@
       const icons = el('div', { class: 'icons' },
         ib('copy', `Künyeyi kopyala: ${kunye}`, b => copyText(b, kunye)),
         ib('note', notes[r.key] ? 'Notu düzenle (yalnız bu bilgisayarda)' : 'Not ekle (yalnız bu bilgisayarda)', () => { editing = r.key; sel = i; render(); }, notes[r.key] ? 'on' : ''),
-        sureBtn(r),
         ib('hide', 'Bu dosyayı aramalarda gösterme (Ayarlar’dan geri alınır)', () => hideFile(r)));
       const isOpen = expanded.has(r.key);
       const detBtn = el('button', { class: 'btn sm', title: 'Durum, dosya türü, açılış tarihi ve son evrak' }, icon(isOpen ? 'up' : 'down'), 'Detay');
@@ -903,7 +739,6 @@
         extra || null,
         partyLines(r, toks, keys),
         evrakBlock(r, toks),
-        sureBlock(r),
         noteBlock(r),
         det,
         el('div', { class: 'ifoot' }, detBtn, open));
@@ -943,9 +778,9 @@
       if (filter.onlyDurusma) return renderDurusmalar();
       const keys = myKeys(myName());
       const q = input.value;
-      const res = search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, sure: sureMap, gizli, vekilAra: pref('vekilAra', true), limit: LIMIT });
+      const res = search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, gizli, vekilAra: pref('vekilAra', true), limit: LIMIT });
       const hint = el('span', { title: 'Arama kutusundayken ↑ ↓ ya da Tab ile dosyalar arasında gezinin, Enter ile seçili dosyayı açın.' }, '↑ ↓ / Tab: seç · Enter: aç');
-      if (!res.tokens.length && !res.total && filter.durum === 'all' && filter.tur === 'all' && !filter.onlyClient && !filter.onlyNew && !filter.onlySure) {
+      if (!res.tokens.length && !res.total && filter.durum === 'all' && filter.tur === 'all' && !filter.onlyClient && !filter.onlyNew) {
         const byKey = new Map(records.map(r => [r.key, r]));
         current = recent.map(k => byKey.get(k)).filter(r => r && !gizli[r.key]);
         if (!current.length) {
@@ -956,14 +791,12 @@
       } else {
         current = res.items;
         if (!res.total) {
-          const narrowed = filter.durum !== 'all' || filter.tur !== 'all' || filter.onlyClient || filter.onlyNew || filter.onlySure;
+          const narrowed = filter.durum !== 'all' || filter.tur !== 'all' || filter.onlyClient || filter.onlyNew;
           let text = 'Eşleşen dosya yok.';
           let action = narrowed ? { label: 'Filtreleri kaldır', fn: () => { clearFilters(); renderFilters(); render(); } } : null;
           if (filter.onlyNew && !res.tokens.length) {
             text = 'Son güncellemeden bu yana yeni evrak yok.';
             action = { label: 'Güncelle', fn: () => { setNotice(''); opts.onUpdate(false); } };
-          } else if (filter.onlySure && !res.tokens.length) {
-            text = 'Açık süre hatırlatması yok. Bir dosyada saat simgesiyle ekleyebilirsiniz.';
           }
           const box = el('div', { class: 'empty' }, el('div', null, text));
           if (action) {
@@ -1241,7 +1074,7 @@
         if (!records.length) return setNotice('Dışa aktarılacak dosya yok. Önce Güncelle’ye basın.', 'err');
         exportCsv();
       });
-      const btnBackup = el('button', { class: 'btn sm', title: 'Dosya listesi, notlar, süre hatırlatmaları, duruşmalar ve ayarlar tek dosyaya yedeklenir.' }, 'Yedekle');
+      const btnBackup = el('button', { class: 'btn sm', title: 'Dosya listesi, notlar, duruşmalar ve ayarlar tek dosyaya yedeklenir.' }, 'Yedekle');
       btnBackup.addEventListener('click', exportBackup);
       const fileIn = el('input', { type: 'file', accept: '.json,application/json', hidden: true });
       fileIn.addEventListener('change', () => { if (fileIn.files[0]) importBackup(fileIn.files[0]); fileIn.value = ''; });
@@ -1250,7 +1083,7 @@
       const btnClear = el('button', { class: 'btn sm danger', title: 'Eklentinin bu bilgisayarda sakladığı her şeyi siler.' }, 'Tüm verileri sil');
       btnClear.disabled = running();
       btnClear.addEventListener('click', async () => {
-        if (!confirm('Dosya listesi, duruşmalar, notlarınız, süre hatırlatmalarınız, gizlenen dosyalar, son açılanlar ve ayarlarınız bu bilgisayardan silinsin mi? Bu işlem geri alınamaz; UYAP’taki dosyalarınız etkilenmez.')) return;
+        if (!confirm('Dosya listesi, duruşmalar, notlarınız, gizlenen dosyalar, son açılanlar ve ayarlarınız bu bilgisayardan silinsin mi? Bu işlem geri alınamaz; UYAP’taki dosyalarınız etkilenmez.')) return;
         await chrome.storage.local.remove(['uhdIndex', 'uhdProgress', 'uhdRecent', 'uhdNotes', 'uhdPrefs', 'uhdPending', 'uhdEvrakGoruldu', 'uhdJob', 'uhdSureler', 'uhdDurusmalar', 'uhdGizli']);
         closeSettings();
         setNotice('Tüm yerel veriler silindi.');
@@ -1309,7 +1142,7 @@
         el('h3', null, 'Hakkında'),
         el('div', { class: 'box' },
           el('div', null, el('b', null, BRAND.name), version ? ` · sürüm ${version}` : ''),
-          el('div', { class: 'hint' }, 'Tüm veriler yalnız bu bilgisayarda saklanır ve hiçbir sunucuya gönderilmez. Notlar ve süre hatırlatmaları eklentiye aittir; UYAP’taki notlarla ilgisi yoktur.'),
+          el('div', { class: 'hint' }, 'Tüm veriler yalnız bu bilgisayarda saklanır ve hiçbir sunucuya gönderilmez. Notlar eklentiye aittir; UYAP’taki notlarla ilgisi yoktur.'),
           el('div', { class: 'hint' }, BRAND.disclaimer),
           el('div', { class: 'row' },
             el('a', { href: BRAND.site, target: '_blank', rel: 'noopener' }, 'legaluga.com'),
@@ -1354,14 +1187,12 @@
     });
     btnSettings.addEventListener('click', () => (settings.hidden ? openSettings() : closeSettings()));
 
-    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu', 'uhdJob', 'uhdSureler', 'uhdDurusmalar', 'uhdGizli']).then(v => {
+    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu', 'uhdJob', 'uhdDurusmalar', 'uhdGizli']).then(v => {
       prefs = v.uhdPrefs || {};
       applyTheme();
-      sureler = v.uhdSureler || {};
       durusmaMeta = v.uhdDurusmalar || null;
       gizli = v.uhdGizli || {};
       computeDurusma();
-      computeSure();
       goruldu = v.uhdEvrakGoruldu || {};
       pendingJob = v.uhdJob || null;
       setIndex(v.uhdIndex);
@@ -1379,7 +1210,6 @@
       if (ch.uhdEvrakGoruldu) goruldu = ch.uhdEvrakGoruldu.newValue || {};
       if (ch.uhdJob) pendingJob = ch.uhdJob.newValue || null;
       if (ch.uhdGizli) { gizli = ch.uhdGizli.newValue || {}; redraw = true; }
-      if (ch.uhdSureler) { sureler = ch.uhdSureler.newValue || {}; computeSure(); renderFilters(); redraw = true; }
       if (ch.uhdDurusmalar) { durusmaMeta = ch.uhdDurusmalar.newValue || null; computeDurusma(); renderFilters(); redraw = true; }
       if (ch.uhdIndex) setIndex(ch.uhdIndex.newValue);
       else if (ch.uhdEvrakGoruldu) computeYeni();
@@ -1391,9 +1221,9 @@
         progress = ch.uhdProgress.newValue || null;
         if (!records.length) redraw = true;   // ilk kullanım ekranındaki düğmenin durumu
       }
-      if (redraw && !editing && !sureEdit && settings.hidden) render();
+      if (redraw && !editing && settings.hidden) render();
       renderStatus();
-      if (ch.uhdIndex || ch.uhdProgress || ch.uhdEvrakGoruldu || ch.uhdSureler || ch.uhdDurusmalar) autoNotice();
+      if (ch.uhdIndex || ch.uhdProgress || ch.uhdEvrakGoruldu || ch.uhdDurusmalar) autoNotice();
     });
     setInterval(renderStatus, 5000);
 
@@ -1403,7 +1233,6 @@
       setNotice,
       focus() { input.focus(); input.select(); },
       setQuery(q) { input.value = q || ''; render(); },
-      showSureler,
       showDurusmalar
     };
   }
