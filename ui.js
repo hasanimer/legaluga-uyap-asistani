@@ -31,7 +31,7 @@
 .uhd svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .uhd header{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--card);color:var(--text)}
 .uhd header strong{font-size:14px;font-weight:700;flex:1;letter-spacing:-.2px}
-.uhd .brand-mark{display:grid;place-items:center;width:30px;height:30px;flex:none;border-radius:9px;background:var(--navy);color:#fff;font-size:17px;font-weight:800}
+.uhd .brand-mark{display:block;width:30px;height:30px;flex:none;fill:none;stroke:none}
 .uhd .count{font-size:11px;color:var(--muted);white-space:nowrap}
 .uhd .x{background:none;border:0;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;width:32px;height:32px;border-radius:8px}
 .uhd .x:hover{background:var(--grey-bg)}
@@ -224,6 +224,22 @@
     return svg;
   }
 
+  // Mağaza görsellerindeki Legaluga logosunun özgün SVG'si (magaza/gorsel/logo.svg).
+  function brandLogo() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'brand-mark');
+    svg.setAttribute('viewBox', '0 0 32 32');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = `<rect width="32" height="32" rx="7" fill="#171717"/>
+      <g fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 8v14h12"/><path d="M10 15l8.5-4.8"/>
+      </g>
+      <g fill="#ffffff">
+        <circle cx="10" cy="8" r="2.5"/><circle cx="18.5" cy="10.2" r="2.5"/><circle cx="22" cy="22" r="2.5"/>
+      </g>`;
+    return svg;
+  }
+
   function el(tag, attrs, ...kids) {
     const e = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
@@ -285,7 +301,7 @@
     const btnStop = el('button', { class: 'btn sm danger', hidden: true }, icon('stop'), el('span', null, 'Durdur'));
     const btnSettings = el('button', { class: 'ib', title: 'Ayarlar', 'aria-label': 'Ayarlar' }, icon('gear'));
     const root = el('div', { class: 'uhd ' + (opts.mode || '') },
-      el('header', null, el('span', { class: 'brand-mark', 'aria-hidden': 'true' }, 'L'), el('strong', null, BRAND.name), count, btnTheme,
+      el('header', null, brandLogo(), el('strong', null, BRAND.name), count, btnTheme,
         opts.onClose ? el('button', { class: 'x', title: 'Kapat', 'aria-label': 'Paneli kapat', onclick: opts.onClose }, '×') : null),
       el('div', { class: 'search' }, input, btnQClear, btnHelp),
       views, filters, notice, list, settings, live, status,

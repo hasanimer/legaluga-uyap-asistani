@@ -35,7 +35,7 @@
 | :---: | :---: |
 | <img src="assets/arama.png" alt="Açık temada dosya arama ve yeni arayüz" width="100%"> | <img src="assets/filtreler.png" alt="Koyu temada dosya kartı ve notlar" width="100%"> |
 
-*1.14.0 arayüzü; görüntülerde örnek veriler kullanılmıştır. Mağaza sürümü inceleme durumuna göre farklı olabilir.*
+*1.14.1 arayüzü; görüntülerde örnek veriler kullanılmıştır. Mağaza sürümü inceleme durumuna göre farklı olabilir.*
 
 <details>
 <summary>Ayarları görüntüle</summary>
