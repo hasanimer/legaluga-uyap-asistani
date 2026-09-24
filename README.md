@@ -4,6 +4,8 @@
 
 Legaluga UYAP Asistanı, [UYAP Avukat Portalı](https://avukat.uyap.gov.tr/) için açık kaynaklı bir Chrome eklentisidir. Dosyalarınızı bir kez güncelledikten sonra kişi adı, dosya numarası, mahkeme veya kendi notunuzla saniyeler içinde bulabilirsiniz.
 
+**[Chrome Web Mağazası'ndan yükle](https://chromewebstore.google.com/detail/legaluga-uyap-asistan%C4%B1/aicknihmpdcbfgidifffinnbgbghkmcn?hl=tr)**
+
 ## Neler yapar?
 
 - **Hızlı arama:** Açık ve kapalı dosyaları Türkçe karakter yazmadan da arayın.
@@ -16,12 +18,10 @@ Arama, bilgisayarınızda tutulan yerel indeks üzerinde çalışır. Eklentinin
 
 ## Kurulum
 
-1. **Code → Download ZIP** ile bu depoyu indirin ve ZIP'i kalıcı bir klasöre çıkarın.
-2. Chrome'da `chrome://extensions` adresini açıp **Geliştirici modu**nu etkinleştirin.
-3. **Paketlenmemiş öğe yükle**'ye basın ve `manifest.json` dosyasının bulunduğu klasörü seçin.
-4. Eklentiyi araç çubuğuna sabitleyin.
+1. [Chrome Web Mağazası sayfasını](https://chromewebstore.google.com/detail/legaluga-uyap-asistan%C4%B1/aicknihmpdcbfgidifffinnbgbghkmcn?hl=tr) açın ve **Chrome'a ekle**'ye basın.
+2. Eklentiyi araç çubuğuna sabitleyin.
 
-> Klasörü sonradan silmeyin veya taşımayın; Chrome eklentiyi bu klasörden çalıştırır.
+Kaynak kodundan kurmak isterseniz **Code → Download ZIP** ile depoyu indirin, ZIP'i kalıcı bir klasöre çıkarın ve `chrome://extensions` sayfasında **Geliştirici modu → Paketlenmemiş öğe yükle** yoluyla `manifest.json` dosyasının bulunduğu klasörü seçin. Bu klasörü sonradan silmeyin veya taşımayın.
 
 ## İlk kullanım
 
