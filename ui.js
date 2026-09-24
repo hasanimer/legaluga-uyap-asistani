@@ -29,10 +29,11 @@
 .uhd :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .uhd button{font:inherit;color:inherit}
 .uhd svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.uhd header{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--card);color:var(--text)}
-.uhd header strong{font-size:14px;font-weight:700;flex:1;letter-spacing:-.2px}
+.uhd header{display:flex;flex-shrink:0;align-items:center;gap:8px;padding:10px 16px;background:var(--card);color:var(--text)}
+.uhd header strong{font-size:14px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px}
 .uhd .brand-mark{display:block;width:30px;height:30px;flex:none;fill:none;stroke:none}
-.uhd .count{font-size:11px;color:var(--muted);white-space:nowrap}
+.uhd .settings-toggle{flex:none}
+.uhd .settings-toggle.on{background:var(--soft);color:var(--accent-text);border-color:var(--bord)}
 .uhd .x{background:none;border:0;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;width:32px;height:32px;border-radius:8px}
 .uhd .x:hover{background:var(--grey-bg)}
 .uhd .search{position:relative;padding:0 14px 10px;background:var(--card)}
@@ -186,7 +187,7 @@
 .uhd .status.err{color:var(--red)}
 .uhd .bar{height:4px;background:var(--line);border-radius:2px;margin-top:5px;overflow:hidden}
 .uhd .bar i{display:block;height:100%;width:0;background:var(--navy);transition:width .3s}
-.uhd footer{display:flex;gap:6px;padding:8px 10px;background:var(--card);align-items:center;border-top:1px solid var(--line)}
+.uhd footer{display:flex;flex-shrink:0;gap:6px;padding:8px 10px;background:var(--card);align-items:center;border-top:1px solid var(--line)}
 .uhd footer .stx{flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uhd footer .stx.err{color:var(--red)}
 .uhd button:disabled{opacity:.5;cursor:default}
@@ -195,7 +196,7 @@
 .uhd :is(input,select,textarea):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .uhd button,.uhd input,.uhd select,.uhd textarea{-webkit-tap-highlight-color:transparent}
 @media(prefers-reduced-motion:reduce){.uhd *{transition:none!important;scroll-behavior:auto!important}}
-@media(max-width:390px){.uhd .count{display:none}.uhd .results{padding:8px}.uhd .view{font-size:11px}.uhd .icons{gap:0}.uhd .ib{width:28px}}
+@media(max-width:390px){.uhd .results{padding:8px}.uhd .view{font-size:11px}.uhd .icons{gap:0}.uhd .ib{width:28px}}
 `;
 
   // Basit çizgi simgeleri (24×24, stroke).
@@ -285,7 +286,6 @@
     const input = el('input', { type: 'search', class: 'q', placeholder: 'Ad, soyad, dosya no, mahkeme veya not yazınız', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Dosya ara' });
     const btnQClear = el('button', { class: 'sbtn clear', title: 'Aramayı temizle', 'aria-label': 'Aramayı temizle', hidden: true }, icon('x'));
     const btnHelp = el('button', { class: 'sbtn help', title: 'Nerede aranır?', 'aria-label': 'Nerede aranır?' }, icon('help'));
-    const count = el('span', { class: 'count' });
     const views = el('nav', { class: 'views', 'aria-label': 'Görünümler' });
     const live = el('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
     const btnTheme = el('button', { class: 'ib', title: 'Temayı değiştir', 'aria-label': 'Temayı değiştir' }, icon('theme'));
@@ -299,13 +299,13 @@
     const statusText = el('div', { class: 'stx' });
     const btnUpdate = el('button', { class: 'btn sm primary' }, icon('sync'), el('span', null, 'Güncelle'));
     const btnStop = el('button', { class: 'btn sm danger', hidden: true }, icon('stop'), el('span', null, 'Durdur'));
-    const btnSettings = el('button', { class: 'ib', title: 'Ayarlar', 'aria-label': 'Ayarlar' }, icon('gear'));
+    const btnSettings = el('button', { class: 'btn sm settings-toggle', title: 'Ayarlar', 'aria-label': 'Ayarlar', 'aria-expanded': 'false' }, icon('gear'), 'Ayarlar');
     const root = el('div', { class: 'uhd ' + (opts.mode || '') },
-      el('header', null, brandLogo(), el('strong', null, BRAND.name), count, btnTheme,
+      el('header', null, brandLogo(), el('strong', { title: BRAND.name }, BRAND.name), btnTheme, btnSettings,
         opts.onClose ? el('button', { class: 'x', title: 'Kapat', 'aria-label': 'Paneli kapat', onclick: opts.onClose }, '×') : null),
       el('div', { class: 'search' }, input, btnQClear, btnHelp),
       views, filters, notice, list, settings, live, status,
-      el('footer', null, statusText, btnStop, btnUpdate, btnSettings));
+      el('footer', null, statusText, btnStop, btnUpdate));
     container.append(el('style', null, CSS), root);
 
     let records = [];
@@ -1089,7 +1089,6 @@
       btnUpdate.hidden = run;
       btnUpdate.replaceChildren(icon('sync'), el('span', null, paused ? 'Sürdür' : 'Güncelle'));
       btnUpdate.title = paused ? 'Yarıda kalan güncellemeyi kaldığı yerden sürdürür.' : 'Dosya listesini, yeni dosyaların taraflarını ve duruşmaları UYAP’tan yeniler.';
-      count.textContent = records.length ? `${fmtNum(records.length)} dosya` : '';
       const err = !run && !!(progress && progress.error);
       statusText.classList.toggle('err', err);
       status.hidden = !run || !progress.total;
