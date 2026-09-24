@@ -35,6 +35,22 @@ async function openRecord(rec) {
   window.close();
 }
 
+// Evrak UYAP sekmesinde, sayfa içi görüntüleyicide açılır (evrakı UYAP oturumu getirir).
+async function openEvrak(rec, key) {
+  const tab = await uyapTab();
+  if (!tab) return noTab();
+  await focusTab(tab);
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'uhd-open-evrak', record: rec, key });
+    window.close();
+  } catch {
+    ui.setNotice('UYAP sekmesi eklentiye yanıt vermedi. Sekmeyi yenileyip tekrar deneyin.', 'err', {
+      label: 'Sekmeyi yenile',
+      fn: () => chrome.tabs.reload(tab.id)
+    });
+  }
+}
+
 async function update(full) {
   const tab = await uyapTab();
   if (!tab) return noTab();
@@ -58,6 +74,7 @@ async function stop() {
 const ui = mountUI(document.getElementById('app'), {
   mode: 'popup',
   onOpen: openRecord,
+  onOpenEvrak: openEvrak,
   onUpdate: update,
   onStop: stop
 });

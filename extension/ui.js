@@ -1,7 +1,7 @@
 // Arama arayüzü: hem eklenti popup'ında hem UYAP sayfasındaki yan panelde aynı kod kullanılır.
 (() => {
   if (globalThis.UHD.mountUI) return;
-  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat } = globalThis.UHD;
+  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, upcomingDurusmalar, durusmaIcs, evrakKey } = globalThis.UHD;
   const SURE_UYAR_GUN = 7;   // bu kadar gün ya da daha az kalan süreler panelde uyarılır
   const EVRAK_SHOW = 3;
   const LIMIT = 60;
@@ -45,6 +45,20 @@
 .uhd .person .row{display:flex;gap:10px;margin-top:6px}
 .uhd .rolein{margin-top:3px;font-size:12px;color:var(--deep)}
 .uhd .rolein.other{color:#7a4b00}
+.uhd .chip.dur{border-color:#b9c4d4;color:#344054}
+.uhd .chip.dur.on{background:#344054;border-color:#344054;color:#fff}
+.uhd .durline{margin-top:2px;font-size:12px;color:#344054}
+.uhd .durline b{font-weight:600}
+.uhd .durline.today b{color:#b42318}
+.uhd .durline.soon b{color:#93370d}
+.uhd .dayhead{display:flex;justify-content:space-between;align-items:baseline;padding:8px 4px 5px;font-size:12px;font-weight:700;color:var(--deep)}
+.uhd .dayhead.today{color:#b42318}
+.uhd .dayhead small{font-weight:400;color:var(--muted)}
+.uhd .durhead{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:4px;font-size:12px;color:#344054}
+.uhd .durhead .row{display:flex;gap:10px;align-items:center;margin-top:6px}
+.uhd .durrow{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.uhd .durrow .t{flex:none;font-weight:700;font-size:14px;color:var(--deep);width:44px}
+.uhd .evopen{margin-left:4px}
 .uhd .chip.sure{border-color:#f4b4ad;color:#b42318}
 .uhd .chip.sure.on{background:#b42318;border-color:#b42318;color:#fff}
 .uhd .sure{margin-top:5px;padding:5px 8px;border-left:3px solid #98a2b3;background:#f5f6f8;border-radius:0 6px 6px 0;font-size:12px;cursor:default}
@@ -232,10 +246,12 @@
     let sureler = {};          // süre hatırlatmaları (uhdSureler): { id: { id, key, dosyaNo, birimAdi, baslik, baslangic, n, unit, bitis, done } }
     let sureMap = new Map();   // kayıt key → en yakın son gün
     let sureEdit = null;       // açık süre formu: { key, baslangic, kaynak }
+    let durusmaMeta = null;    // uhdDurusmalar: { at, gun, list }
+    let durusmaByKey = new Map(); // kayıt key → yaklaşan duruşmalar (sıralı)
     let yeniMap = new Map();   // kayıt key → en yeni görülmemiş evrakın onay zamanı
     let yeniCount = 0;         // görülmemiş yeni evrak sayısı
     let evrakTracked = false;  // en az bir dosyanın evrakları tarandı mı
-    const filter = { durum: 'all', tur: 'all', onlyClient: false, onlyNew: false, onlySure: false };
+    const filter = { durum: 'all', tur: 'all', onlyClient: false, onlyNew: false, onlySure: false, onlyDurusma: false };
 
     const myName = () => (prefs.myName || '').trim() || detected;
     const running = () => !!(progress && progress.running && Date.now() - (progress.beat || 0) < RUN_STALE_MS);
@@ -288,6 +304,15 @@
           label: 'Göster', fn: () => showSureler()
         });
       }
+      const yakinDur = upcomingDurusmalar(durusmaMeta && durusmaMeta.list).filter(d => daysLeft(d.tarih) <= 1);
+      if (records.length && yakinDur.length && !filter.onlyDurusma) {
+        const bugun = yakinDur.filter(d => daysLeft(d.tarih) === 0);
+        const ilk = (bugun[0] || yakinDur[0]);
+        const text = bugun.length
+          ? `Bugün ${bugun.length} duruşmanız var; ilki ${ilk.saat}, ${ilk.dosyaNo} ${ilk.birimAdi}.`
+          : `Yarın ${yakinDur.length} duruşmanız var; ilki ${ilk.saat}, ${ilk.dosyaNo} ${ilk.birimAdi}.`;
+        return showNotice(text, '', { label: 'Göster', fn: () => showDurusmalar() });
+      }
       const update = { label: 'Güncelle', fn: () => { setNotice(''); opts.onUpdate(false); } };
       if (!records.length || running()) return showNotice('');
       const oldParties = records.filter(r => r.taraflar && r.tarafV !== TARAF_V).length;
@@ -314,6 +339,7 @@
       { group: 'tur', v: 'other', label: 'Diğer', title: 'İdari Yargı, Satış Memurluğu, Arabuluculuk, Tazminat Komisyonu' },
       null,
       { group: 'onlyClient', v: true, label: 'Müvekkil', title: 'Yalnızca müvekkil adlarında ara', cls: 'client' },
+      { group: 'onlyDurusma', v: true, label: 'Duruşmalar', title: 'Son güncellemede UYAP’tan alınan yaklaşan duruşmalar, günlere göre', cls: 'dur' },
       { group: 'onlySure', v: true, label: 'Süreler', title: 'Süre hatırlatması eklediğiniz dosyalar, son günü en yakın olan önce', cls: 'sure' },
       { group: 'onlyNew', v: true, label: 'Yeni evrak', title: 'Güncellemelerde yeni evrak gelen ve henüz “Görüldü” demediğiniz dosyalar', cls: 'new' }
     ];
@@ -323,20 +349,23 @@
         if (!c) { filters.append(el('span', { class: 'sep' })); continue; }
         if (c.group === 'onlyNew' && !evrakTracked) continue;
         if (c.group === 'onlySure' && !sureMap.size && !filter.onlySure) continue;
+        if (c.group === 'onlyDurusma' && !durusmaMeta) continue;
         const on = filter[c.group] === c.v;
         const label = c.group === 'onlyNew' && yeniMap.size ? `${c.label} (${fmtNum(yeniMap.size)})`
-          : c.group === 'onlySure' && sureMap.size ? `${c.label} (${fmtNum(sureMap.size)})` : c.label;
+          : c.group === 'onlySure' && sureMap.size ? `${c.label} (${fmtNum(sureMap.size)})`
+          : c.group === 'onlyDurusma' ? `${c.label} (${fmtNum(upcomingDurusmalar(durusmaMeta.list).length)})` : c.label;
         const b = el('button', { class: 'chip' + (c.cls ? ' ' + c.cls : '') + (on ? ' on' : ''), title: c.title || null, 'aria-pressed': String(on) }, label);
         b.addEventListener('click', () => {
           if (c.group === 'onlyClient' && !on && !myKeys(myName()).length) {
             setNotice('Müvekkil tespiti için vekil adınız bulunamadı. Ayarlar’dan adınızı girin.', '', { label: 'Ayarlar', fn: () => { setNotice(''); openSettings(); } });
             return;
           }
-          filter[c.group] = on ? (['onlyClient', 'onlyNew', 'onlySure'].includes(c.group) ? false : 'all') : c.v;
+          filter[c.group] = on ? (['onlyClient', 'onlyNew', 'onlySure', 'onlyDurusma'].includes(c.group) ? false : 'all') : c.v;
+          if (c.group === 'onlyDurusma') person = null;
           sel = 0;
           renderFilters();
           render();
-          if (c.group === 'onlyNew' || c.group === 'onlySure') autoNotice();
+          if (c.group === 'onlyNew' || c.group === 'onlySure' || c.group === 'onlyDurusma') autoNotice();
         });
         filters.append(b);
       }
@@ -428,6 +457,7 @@
         const alt = [y.gonderen, evrakDosya(r, y.dosya), y.aciklama].filter(Boolean).join(' · ');
         return el('li', { title: [y.tur, tarih, y.gonderen, evrakDosya(r, y.dosya), y.aciklama].filter(Boolean).join('\n') },
           el('b', null, y.tur || 'Evrak'), ' · ', tarih,
+          ' ', evrakOpenBtn(r, y.k),
           isTebligat(y.tur) ? [' ', sureLink(r, y)] : null,
           alt ? el('div', null, el('small', null, highlight(alt, toks))) : null);
       });
@@ -462,7 +492,102 @@
       const s = lastEvrak(r);
       const title = s.gonderim && s.gonderim !== s.onay ? `Onay ${s.onay}, sisteme gönderim ${s.gonderim}` : `Onay ${s.onay}`;
       return el('div', { class: 'son', title: 'Dosyadaki en yeni evrak (son güncellemeye göre). ' + title }, 'Son evrak: ', el('b', null, s.onay), t.slice(s.onay.length),
+        s.k ? [' ', evrakOpenBtn(r, s.k)] : null,
         isTebligat(s.tur) ? [' ', sureLink(r, s)] : null);
+    }
+
+    // ------------------------------------------------ evrak açma ve duruşmalar
+
+    function evrakOpenBtn(r, k) {
+      if (!k || !opts.onOpenEvrak) return null;
+      const b = el('button', { class: 'notebtn evopen', title: 'Evrakı UYAP’tan getirip göster (evrak saklanmaz)' }, 'Aç');
+      b.addEventListener('click', e => { e.stopPropagation(); opts.onOpenEvrak(r, k); });
+      return b;
+    }
+
+    function computeDurusma() {
+      durusmaByKey = new Map();
+      for (const d of upcomingDurusmalar(durusmaMeta && durusmaMeta.list)) {
+        if (!durusmaByKey.has(d.key)) durusmaByKey.set(d.key, []);
+        durusmaByKey.get(d.key).push(d);
+      }
+      if (!durusmaMeta) filter.onlyDurusma = false;
+    }
+
+    const gunText = n => (n === 0 ? 'bugün' : n === 1 ? 'yarın' : `${n} gün sonra`);
+
+    function durLine(r) {
+      if (filter.onlyDurusma) return null;   // duruşmalar görünümünde saat satırı ayrıca yazılıyor
+      const list = durusmaByKey.get(r.key);
+      if (!list || !list.length) return null;
+      const d = list[0];
+      const n = daysLeft(d.tarih);
+      return el('div', { class: 'durline' + (n === 0 ? ' today' : n <= 3 ? ' soon' : ''), title: list.map(x => `${fmtIso(x.tarih, true)} ${x.saat} · ${x.islem}`).join('\n') },
+        `${d.islem}: `, el('b', null, `${fmtIso(d.tarih, true)} ${d.saat}`), ` · ${gunText(n)}`, list.length > 1 ? ` (+${list.length - 1})` : '');
+    }
+
+    function showDurusmalar() {
+      person = null;
+      filter.onlyDurusma = true;
+      sel = 0;
+      renderFilters();
+      render();
+      autoNotice();
+    }
+
+    function exportIcs(list) {
+      const url = URL.createObjectURL(new Blob([durusmaIcs(list)], { type: 'text/calendar;charset=utf-8' }));
+      const a = el('a', { href: url, download: `durusmalar-${todayIso()}.ics` });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+
+    function renderDurusmalar() {
+      const keys = myKeys(myName());
+      const byKey = new Map(records.map(r => [r.key, r]));
+      const toks = norm(input.value).split(/\s+/).filter(Boolean);
+      const all = upcomingDurusmalar(durusmaMeta && durusmaMeta.list);
+      const rows = toks.length
+        ? all.filter(d => { const h = norm([d.dosyaNo, d.birimAdi, d.islem, ...d.taraflar.map(t => t.ad)].join(' ')); return toks.every(t => h.includes(t)); })
+        : all;
+      const ics = el('button', { class: 'notebtn', title: 'Listelenen duruşmaları takvim dosyası (.ics) olarak indir; Outlook, Google Takvim ve telefon takvimleri açar. Taraf adları yazılmaz.' }, 'Takvime aktar (.ics)');
+      ics.addEventListener('click', () => exportIcs(rows));
+      const src = durusmaMeta && durusmaMeta.at ? `UYAP’tan ${fmtAgo(durusmaMeta.at)} alındı; sonraki ${durusmaMeta.gun || 60} gün.` : '';
+      const head = el('div', { class: 'durhead' },
+        el('div', null, el('b', null, `${fmtNum(rows.length)} duruşma`), toks.length ? ` (“${input.value.trim()}” içeren)` : '', ' · ', src),
+        el('div', { class: 'row' }, rows.length ? ics : null,
+          el('span', { style: 'color:var(--muted);font-size:11px' }, 'Saatleri UYAP’ta teyit edin; liste yalnız Güncelle’de yenilenir.')));
+      const out = [head];
+      current = [];
+      let day = null;
+      for (const d of rows) {
+        if (d.tarih !== day) {
+          day = d.tarih;
+          const n = daysLeft(d.tarih);
+          out.push(el('div', { class: 'dayhead' + (n === 0 ? ' today' : '') },
+            el('span', null, n === 0 ? `Bugün · ${fmtIso(d.tarih, true)}` : n === 1 ? `Yarın · ${fmtIso(d.tarih, true)}` : fmtIso(d.tarih, true)),
+            el('small', null, gunText(n))));
+        }
+        const r = byKey.get(d.key);
+        const info = el('div', { class: 'durline' }, el('b', null, `${d.saat} · ${d.islem}`), d.sonuc ? ` · ${d.sonuc}` : '');
+        if (r) {
+          out.push(item(r, current.length, toks, keys, info));
+          current.push(r);
+        } else {
+          out.push(el('div', { class: 'durrow' },
+            el('span', { class: 't' }, d.saat),
+            el('div', { class: 'info' },
+              el('div', { class: 'title' }, el('b', null, d.dosyaNo), el('span', null, d.birimAdi)),
+              el('div', { class: 'meta' }, [d.islem, d.dosyaTur].filter(Boolean).join(' · ')),
+              el('div', { class: 'parties' }, d.taraflar.map(t => `${t.sifat ? t.sifat + ': ' : ''}${t.ad}`).join(' · ')),
+              el('div', { class: 'meta' }, 'Bu dosya indekste yok; açmak için Güncelle’ye basın.'))));
+        }
+      }
+      if (!rows.length) out.push(el('div', { class: 'empty' }, all.length ? 'Aramanızla eşleşen duruşma yok.' : `Sonraki ${durusmaMeta && durusmaMeta.gun || 60} günde duruşma görünmüyor.`));
+      list.append(...out);
+      if (sel >= current.length) sel = 0;
     }
 
     // ------------------------------------------------ süre hatırlatıcı
@@ -629,6 +754,7 @@
             yeniMap.has(r.key) ? el('span', { class: 'badge new' }, 'Yeni evrak') : null,
             [r.dosyaTur, r.acilis].filter(Boolean).join(' · ')),
           sonLine(r),
+          durLine(r),
           extra || null,
           partyEls,
           evrakBlock(r, toks),
@@ -668,6 +794,7 @@
         return;
       }
       if (person) return renderPerson();
+      if (filter.onlyDurusma) return renderDurusmalar();
       const keys = myKeys(myName());
       const q = input.value;
       const res = search(records, q, { myName: myName(), notes, filter, yeni: yeniMap, sure: sureMap, limit: LIMIT });
@@ -686,7 +813,7 @@
           const narrowed = filter.durum !== 'all' || filter.tur !== 'all' || filter.onlyClient || filter.onlyNew || filter.onlySure;
           const box = el('div', { class: 'empty' }, 'Eşleşen dosya yok.');
           if (narrowed) {
-            box.append(el('br'), el('button', { class: 'notebtn', onclick: () => { filter.durum = 'all'; filter.tur = 'all'; filter.onlyClient = false; filter.onlyNew = false; filter.onlySure = false; renderFilters(); render(); } }, 'Filtreleri kaldırıp tekrar ara'));
+            box.append(el('br'), el('button', { class: 'notebtn', onclick: () => { filter.durum = 'all'; filter.tur = 'all'; filter.onlyClient = false; filter.onlyNew = false; filter.onlySure = false; filter.onlyDurusma = false; renderFilters(); render(); } }, 'Filtreleri kaldırıp tekrar ara'));
           }
           list.append(box);
           return;
@@ -782,7 +909,7 @@
 
     function exportCsv() {
       const keys = myKeys(myName());
-      const rows = [['Dosya No', 'Birim', 'Yargı Türü', 'Dosya Türü', 'Durum', 'Açılış', 'Müvekkil', 'Diğer Taraflar', 'Karşı Taraf Vekilleri', 'Son Evrak', 'Not']];
+      const rows = [['Dosya No', 'Birim', 'Yargı Türü', 'Dosya Türü', 'Durum', 'Açılış', 'Müvekkil', 'Diğer Taraflar', 'Karşı Taraf Vekilleri', 'Son Evrak', 'Sonraki Duruşma', 'Not']];
       const sorted = [...records].sort((a, b) =>
         (a.yargiTuruAdi || '').localeCompare(b.yargiTuruAdi || '', 'tr') ||
         (a.birimAdi || '').localeCompare(b.birimAdi || '', 'tr') ||
@@ -798,6 +925,7 @@
           others.map(p => `${p.rol ? p.rol + ': ' : ''}${p.adi}`).join('; '),
           vek.join(', '),
           sonText(r),
+          (d => (d ? `${fmtIso(d.tarih)} ${d.saat} ${d.islem}` : ''))((durusmaByKey.get(r.key) || [])[0]),
           notes[r.key] || ''
         ]);
       }
@@ -904,13 +1032,15 @@
       exportCsv();
     });
     btnClear.addEventListener('click', async () => {
-      if (!confirm('Dosya indeksi, notlarınız, süre hatırlatmalarınız, son açılanlar ve ayarlarınız bu bilgisayardan silinsin mi? Bu işlem geri alınamaz; UYAP’taki dosyalarınız etkilenmez.')) return;
-      await chrome.storage.local.remove(['uhdIndex', 'uhdProgress', 'uhdRecent', 'uhdNotes', 'uhdPrefs', 'uhdPending', 'uhdEvrakGoruldu', 'uhdJob', 'uhdSureler']);
+      if (!confirm('Dosya indeksi, duruşma listesi, notlarınız, süre hatırlatmalarınız, son açılanlar ve ayarlarınız bu bilgisayardan silinsin mi? Bu işlem geri alınamaz; UYAP’taki dosyalarınız etkilenmez.')) return;
+      await chrome.storage.local.remove(['uhdIndex', 'uhdProgress', 'uhdRecent', 'uhdNotes', 'uhdPrefs', 'uhdPending', 'uhdEvrakGoruldu', 'uhdJob', 'uhdSureler', 'uhdDurusmalar']);
       setNotice('Tüm yerel veriler silindi.');
     });
 
-    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu', 'uhdJob', 'uhdSureler']).then(v => {
+    chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu', 'uhdJob', 'uhdSureler', 'uhdDurusmalar']).then(v => {
       sureler = v.uhdSureler || {};
+      durusmaMeta = v.uhdDurusmalar || null;
+      computeDurusma();
       computeSure();
       goruldu = v.uhdEvrakGoruldu || {};
       pendingJob = v.uhdJob || null;
@@ -933,6 +1063,7 @@
       if (ch.uhdEvrakGoruldu) goruldu = ch.uhdEvrakGoruldu.newValue || {};
       if (ch.uhdJob) pendingJob = ch.uhdJob.newValue || null;
       if (ch.uhdSureler) { sureler = ch.uhdSureler.newValue || {}; computeSure(); renderFilters(); redraw = true; }
+      if (ch.uhdDurusmalar) { durusmaMeta = ch.uhdDurusmalar.newValue || null; computeDurusma(); renderFilters(); redraw = true; }
       if (ch.uhdIndex) setIndex(ch.uhdIndex.newValue);
       else if (ch.uhdEvrakGoruldu) computeYeni();
       if (ch.uhdIndex || ch.uhdEvrakGoruldu) { renderFilters(); redraw = true; }
@@ -951,7 +1082,7 @@
       }
       if (redraw && !editing && !sureEdit) render();
       renderStatus();
-      if (ch.uhdIndex || ch.uhdProgress || ch.uhdEvrakGoruldu || ch.uhdSureler) autoNotice();
+      if (ch.uhdIndex || ch.uhdProgress || ch.uhdEvrakGoruldu || ch.uhdSureler || ch.uhdDurusmalar) autoNotice();
     });
     setInterval(renderStatus, 5000);
 
@@ -961,7 +1092,8 @@
       setNotice,
       focus() { input.focus(); input.select(); },
       setQuery(q) { input.value = q || ''; render(); },
-      showSureler
+      showSureler,
+      showDurusmalar
     };
   }
 

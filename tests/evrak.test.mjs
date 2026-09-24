@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 createRequire(import.meta.url)('../extension/common.js');
-const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search, sonEvrak, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat } = globalThis.UHD;
+const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search, sonEvrak, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, parseDurusma, upcomingDurusmalar, uyapDate, durusmaIcs } = globalThis.UHD;
 
 // UYAP evrakId/dosyaId'yi her yanıtta yeniden şifreler; testte de her çağrıda farklı kimlik üretilir.
 let sayac = 0;
@@ -91,10 +91,10 @@ test('"Yeni evrak" filtresi yalnız yeni evraklı dosyaları, en yeni evrak önd
 
 test('dosyadaki son evrak onay tarihine göre bulunur; eski kayıtlarda anahtarlardan çıkarılır', () => {
   const items = parseEvraklar(yanit(ilk)).items;
-  assert.deepEqual(sonEvrak(items), { tur: 'Kapalı E-Tebliğ Mazbatası', onay: '02/08/2026', gonderim: '02/08/2026', dosya: '2025/9101(Ceza Dava Dosyası)' });
+  assert.deepEqual(sonEvrak(items), { k: '12|02/08/2026|Kapalı E-Tebliğ Mazbatası', tur: 'Kapalı E-Tebliğ Mazbatası', onay: '02/08/2026', gonderim: '02/08/2026', dosya: '2025/9101(Ceza Dava Dosyası)' });
   assert.equal(sonEvrak([]), null);
   const seen = diffEvrak(undefined, items).seen;
-  assert.deepEqual(lastEvrak({ evrakSeen: seen }), { tur: 'Kapalı E-Tebliğ Mazbatası', onay: '02/08/2026', gonderim: undefined, dosya: undefined });
+  assert.deepEqual(lastEvrak({ evrakSeen: seen }), { k: '12|02/08/2026|Kapalı E-Tebliğ Mazbatası', tur: 'Kapalı E-Tebliğ Mazbatası', onay: '02/08/2026', gonderim: undefined, dosya: undefined });
   assert.equal(lastEvrak({ sonEvrak: { onay: '01/01/2026', tur: 'X' }, evrakSeen: seen }).onay, '01/01/2026');
   assert.equal(lastEvrak({}), null);
 });
@@ -153,4 +153,42 @@ test('süre hatırlatıcı: yalnız tamamlanmamışlar, en yakın önce; "Sürel
   const bul = q => search([kayit('k1'), kayit('k2'), kayit('k3')], q, { filter: { onlySure: true }, sure }).items.map(r => r.key).join(',');
   assert.equal(bul(''), 'k2,k1');
   assert.equal(bul('k1'), 'k1');
+});
+
+// Uydurma örnek; yapı avukat_durusma_sorgula_brd.ajx yanıtıyla aynı.
+const durusmaYaniti = (tarihSaat, extra = {}) => ({
+  kayitId: 123456789, dosyaId: '"SIFRELI"', dosyaNo: '2025/9101', dosyaTurKod: 3, dosyaTurKodAciklama: 'Ceza Dava Dosyası',
+  birimId: '1000123', birimTuru2: '0921', yerelBirimAd: 'Ankara 14. Asliye Ceza Mahkemesi', tarihSaat,
+  islemTuru: 0, islemTuruAciklama: 'Duruşma', islemSonucu: 0, islemSonucuAciklama: 'Günü Verildi',
+  dosyaTaraflari: [
+    { isim: 'AHMET', soyad: 'YILMAZ', sifat: 'SANIK', ilkKisiKurumID: '1', isVekil: false },
+    { isim: 'TEST', soyad: 'AVUKAT', sifat: 'VEKİL', ilkKisiKurumID: '2', isVekil: true },
+    { isim: 'ÖRNEK KURUM', sifat: 'MÜŞTEKİ', ilkKisiKurumID: '3', isVekil: false }
+  ],
+  token: 'GIZLI', ...extra
+});
+
+test('duruşma kaydı: indeks anahtarı, tarih/saat, vekil (avukatın kendisi) ve jeton saklanmaz', () => {
+  const d = parseDurusma(durusmaYaniti('2026-10-07 10:30:00.0'));
+  assert.equal(d.key, '1000123|2025/9101|3');
+  assert.equal(d.tarih, '2026-10-07');
+  assert.equal(d.saat, '10:30');
+  assert.equal(d.islem, 'Duruşma');
+  assert.deepEqual(d.taraflar, [{ ad: 'AHMET YILMAZ', sifat: 'SANIK' }, { ad: 'ÖRNEK KURUM', sifat: 'MÜŞTEKİ' }]);
+  assert.ok(!JSON.stringify(d).includes('GIZLI') && !JSON.stringify(d).includes('SIFRELI'));
+  assert.equal(parseDurusma(durusmaYaniti('bozuk')), null);
+  assert.equal(uyapDate(new Date(2026, 8, 4)), '04.09.2026');
+});
+
+test('yaklaşan duruşmalar sıralı; takvim dosyası UTC saatli ve taraf adsız', () => {
+  const a = parseDurusma(durusmaYaniti('2026-10-07 14:00:00.0', { kayitId: 2 }));
+  const b = parseDurusma(durusmaYaniti('2026-10-07 09:15:00.0', { kayitId: 3 }));
+  const c = parseDurusma(durusmaYaniti('2026-09-01 09:00:00.0', { kayitId: 4 }));
+  assert.deepEqual(upcomingDurusmalar([a, b, c], '2026-09-24').map(d => d.id), ['3', '2']);
+  const ics = durusmaIcs([b], new Date(Date.UTC(2026, 8, 24, 7, 0)));
+  assert.match(ics, /DTSTART:20261007T061500Z/);
+  assert.match(ics, /DTEND:20261007T071500Z/);
+  assert.match(ics, /SUMMARY:Duruşma: 2025\/9101 Ankara 14. Asliye Ceza Mahkemesi/);
+  assert.ok(!ics.includes('AHMET'));
+  assert.ok(ics.startsWith('BEGIN:VCALENDAR\r\n') && ics.endsWith('END:VCALENDAR\r\n'));
 });

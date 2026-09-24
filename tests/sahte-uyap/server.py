@@ -62,6 +62,34 @@ def evraklar(dosya_id):
         gruplar["2024/555(Talimat Dosyası)"] = [evrak(j, 500) for j in (2, 1)]
     return {"tumEvraklar": gruplar, "son20Evrak": ana[:20], "pageTotal": 1, "status": 200}
 
+# Duruşmalar: her 5 dosyadan birine istenen aralıkta bir duruşma (bugünden i % 20 gün sonra).
+def durusmalar(body):
+    bas = datetime.datetime.strptime(body['baslangicTarihi'], '%d.%m.%Y').date()
+    bit = datetime.datetime.strptime(body['bitisTarihi'], '%d.%m.%Y').date()
+    bugun = datetime.date.today()
+    out = []
+    for i, d in enumerate(BY_ID.values()):
+        if i % 5 or d['dosyaDurumKod'] != 0:
+            continue
+        gun = bugun + datetime.timedelta(days=i % 20)
+        if not (bas <= gun <= bit):
+            continue
+        out.append({"kayitId": 1000 + i, "dosyaId": d['dosyaId'], "dosyaNo": d['dosyaNo'], "dosyaTurKod": d['dosyaTurKod'],
+                    "dosyaTurKodAciklama": d['dosyaTur'], "birimId": d['birimId'], "birimTuru2": d['birimTuru2'],
+                    "yerelBirimAd": d['birimAdi'], "tarihSaat": f"{gun.isoformat()} {9 + i % 7:02d}:30:00.0",
+                    "islemTuru": 0, "islemTuruAciklama": "Duruşma" if i % 3 else "Ön İnceleme", "islemSonucu": 0,
+                    "islemSonucuAciklama": "Günü Verildi", "token": "",
+                    "dosyaTaraflari": [dict(isim=t['adi'].split(' ')[0], soyad=' '.join(t['adi'].split(' ')[1:]), sifat=t['rol'].upper(),
+                                            ilkKisiKurumID=str(j), isVekil=False) for j, t in enumerate(taraflar(d['dosyaId']))]
+                                     + [dict(isim='TEST', soyad='AVUKAT', sifat='VEKİL', ilkKisiKurumID='9', isVekil=True)]})
+    return out
+
+# Evrak görüntüleme: tek sayfalık küçük bir PDF (gerçek UYAP application/pdf döndürüyor).
+ORNEK_PDF = (b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj "
+             b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 120]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj "
+             b"4 0 obj<</Length 44>>stream\nBT /F1 18 Tf 20 60 Td (Ornek evrak) Tj ET\nendstream endobj "
+             b"5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n")
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         sys.stderr.write("%s\n" % (fmt % a))
@@ -81,6 +109,12 @@ class H(BaseHTTPRequestHandler):
             if os.path.isfile(f):
                 return self.send(200, open(f, 'rb').read(), 'text/javascript; charset=utf-8' if f.endswith('.js') else 'text/css')
             return self.send(404, b'', 'text/plain')
+        if p == '/view_document_brd.uyap':
+            from urllib.parse import urlparse, parse_qs
+            q = parse_qs(urlparse(self.path).query)
+            if not q.get('evrakId') or not q.get('dosyaId'):
+                return self.send(200, b'{"error":"eksik"}', 'text/json')
+            return self.send(200, ORNEK_PDF, 'application/pdf')
         if p.startswith('/mock/'):
             return self.send(200, open(os.path.join(HERE, p[6:]), 'rb').read(), 'text/javascript; charset=utf-8')
         return self.send(200, open(os.path.join(HERE, 'mock.html'), 'rb').read(), 'text/html; charset=utf-8')
@@ -98,6 +132,8 @@ class H(BaseHTTPRequestHandler):
             out = [rows[(page - 1) * size: page * size], len(rows)]
         elif p == 'dosya_taraf_bilgileri_brd.ajx':
             out = taraflar(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
+        elif p == 'avukat_durusma_sorgula_brd.ajx':
+            out = durusmalar(body)
         elif p == 'list_dosya_evraklar.ajx':
             out = evraklar(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
         else:

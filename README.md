@@ -76,7 +76,7 @@ Her **Güncelle**'de açık dosyaların evrak listesi (UYAP'taki **Evrak Getir**
 - Paneldeki **… dosyada … yeni evrak var · Göster** bildirimi ya da **Yeni evrak** filtresi yalnız bu dosyaları listeler.
 - **Görüldü** o dosyanın yeni evraklarını listeden kaldırır; filtre açıkken **Tümünü görüldü say** hepsini kaldırır. Sonraki güncellemelerde gelen evraklar yine görünür.
 
-Evrakların kendisi ve içerikleri indirilmez; yalnız liste bilgisi (tür, tarih, gönderen, açıklama, birim evrak no) saklanır. Kapalı dosyalar kontrol edilmez. Her açık dosya için UYAP'a bir istek daha gittiği için güncelleme biraz uzar; istemezseniz **Ayarlar → Güncellemede açık dosyalardaki yeni evrakları bul** işaretini kaldırın.
+Güncellemede evrakların kendisi indirilmez; yalnız liste bilgisi (tür, tarih, gönderen, açıklama, birim evrak no) saklanır. Kapalı dosyalar kontrol edilmez. Her açık dosya için UYAP'a bir istek daha gittiği için güncelleme biraz uzar; istemezseniz **Ayarlar → Güncellemede açık dosyalardaki yeni evrakları bul** işaretini kaldırın.
 
 ### 5. Müvekkil kartı
 
@@ -87,7 +87,26 @@ Sonuçlarda herhangi bir taraf adına tıklayın: o kişinin geçtiği **tüm do
 - **← Geri** ya da **Esc** aramaya döner; arama kutusuna yazmak da kartı kapatır.
 - UYAP taraf listesinde kimlik numarası olmadığından eşleştirme ad-soyadla yapılır; aynı ad-soyada sahip farklı kişiler birlikte listelenebilir.
 
-### 6. Süre hatırlatıcı (tebligat)
+### 6. Evrakı açma
+
+Yeni evrak listesinde ve **Son evrak** satırında **Aç**'a basın: evrak UYAP'tan getirilir ve UYAP sayfasının üstünde açılan pencerede gösterilir (PDF). Pencerede **Yeni sekmede aç**, **İndir** ve **Kapat** (Esc) var. PDF olmayan biçimlerde (ör. UDF, TIFF) tarayıcı doğrudan gösteremediği için **İndir** ya da dosyayı UYAP'ta açma önerilir.
+
+- Evrak yalnız siz **Aç**'a bastığınızda, sizin UYAP oturumunuzla, UYAP'ın kendi evrak görüntüleme adresinden alınır. Eklenti evrakı **saklamaz**, okumaz, işlemez; pencere kapanınca bellekten atılır.
+- UYAP evrak kimliklerini her yanıtta yeniden şifrelediği için açarken dosyanın evrak listesi bir kez daha alınır; dosya kimliği oturum değiştiyse geçersizse dosya da yeniden sorgulanır. Bu yüzden açma birkaç saniye sürebilir.
+- Popup'tan açarsanız UYAP sekmesine geçilir ve evrak orada gösterilir.
+
+### 7. Duruşmalar
+
+Her **Güncelle**'de UYAP'ın **Duruşma Sorgula** ekranındaki liste, bugünden itibaren **60 gün** için alınır.
+
+- Dosya kartında sonraki duruşma görünür (ör. `Duruşma: 07.10.2026 Çarşamba 10:30 · 13 gün sonra`).
+- **Duruşmalar** filtresi, yaklaşan duruşmaları günlere ayrılmış olarak listeler; arama kutusuna yazdıklarınız bu listeyi süzer.
+- Bugün ya da yarın duruşma varsa panelin üstünde uyarı çıkar; bugün duruşma varsa UYAP'ı açtığınızda (sekme başına günde bir kez) bildirim gösterilir.
+- **Takvime aktar (.ics)** listelenen duruşmaları Outlook, Google Takvim ya da telefon takvimine eklenebilecek dosya olarak indirir. Takvimler çoğu zaman buluta eşitlendiği için dosyaya taraf adları yazılmaz; yalnız dosya no, mahkeme ve işlem.
+- Excel'e aktarımda **Sonraki Duruşma** sütunu vardır.
+- Liste yalnız **Güncelle**'de yenilenir; saatleri UYAP'ta teyit edin.
+
+### 8. Süre hatırlatıcı (tebligat)
 
 Kartta **Süre ekle**'ye basın (yeni evraklarda ya da son evrakta bir tebligat görünüyorsa yanında da **Süre ekle** çıkar ve başlangıç olarak o evrakın tarihi önerilir):
 
@@ -103,7 +122,7 @@ Hatırlatmalar:
 
 > **Önemli:** Eklenti yasal süreyi belirlemez. Tebliğ tarihini ve süreyi siz girersiniz; evrak tarihi tebliğ tarihi olmayabilir (e-tebligatta tebliğ, adrese ulaştığı günü izleyen 5. günün sonunda yapılmış sayılır). Son gün yalnız takvimle önerilir: resmî ve dinî bayramlar ile adli tatil uzaması uygulanmaz. Hatırlatmalar yalnız bu bilgisayarda tutulur ve Chrome kapalıyken bildirim gönderilmez.
 
-### 7. Diğer özellikler
+### 9. Diğer özellikler
 
 - **Kopyala:** Dosya künyesini (`Ankara 14. Asliye Hukuk Mahkemesi 2025/123 E.` biçiminde) panoya kopyalar; dilekçeye yapıştırmak için.
 - **Not ekle:** Dosyaya yalnız bu bilgisayarda görünen not yazın (Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer). Notlar aramada da bulunur.
@@ -113,7 +132,7 @@ Hatırlatmalar:
 
 ### Verileriniz
 
-Dosya listesi, taraf adları, açık dosyaların evrak listesi, notlar ve ayarlar yalnız bu bilgisayarda Chrome'un eklenti deposunda tutulur; Legaluga'ya ya da başka bir sunucuya gönderilmez. Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve UYAP'a yalnız siz **Güncelle**'ye bastığınızda, sizin oturumunuzla, UYAP'ın kendi ekranlarının kullandığı istekleri yapar. **Ayarlar → Tüm verileri sil** her şeyi siler; eklentiyi kaldırmak da siler. Ayrıntı: [Gizlilik politikası](https://legaluga.com/gizlilik/uyap-asistani).
+Dosya listesi, taraf adları, açık dosyaların evrak listesi, duruşma listesi, notlar, süre hatırlatmaları ve ayarlar yalnız bu bilgisayarda Chrome'un eklenti deposunda tutulur; Legaluga'ya ya da başka bir sunucuya gönderilmez. Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve UYAP'a yalnız siz **Güncelle**'ye, **Dosya Görüntüle**'ye ya da bir evrakta **Aç**'a bastığınızda, sizin oturumunuzla, UYAP'ın kendi ekranlarının kullandığı istekleri yapar. Açtığınız evrak saklanmaz. **Ayarlar → Tüm verileri sil** her şeyi siler; eklentiyi kaldırmak da siler. Ayrıntı: [Gizlilik politikası](https://legaluga.com/gizlilik/uyap-asistani).
 
 ### Sorun giderme
 
@@ -145,6 +164,8 @@ Dosya listesi, taraf adları, açık dosyaların evrak listesi, notlar ve ayarla
 - **Güncelleme** (yalnız kullanıcı "Güncelle"ye bastığında): UYAP Detaylı Sorgulama ekranının kendi kullandığı istekler. Her yargı türü ve birim türü için açık/kapalı dosyalar `search_phrase_detayli.ajx` ile listelenir, taraf ve vekil adları `dosya_taraf_bilgileri_brd.ajx` ile alınır. Yanıtlar UTF-8 değilse windows-1254 olarak çözülür.
 - **Evrak takibi** (Güncelle'nin son adımı, Ayarlar'dan kapatılabilir): bu taramada bulunan her açık dosya için `list_dosya_evraklar.ajx {dosyaId, pageNumber}` çağrılır (UYAP'ın Evrak Getir ekranının isteği; `pageTotal` > 1 ise en çok 20 sayfa). Yanıttaki `tumEvraklar` dosyayı ve bağlı dosyaları (talimat, soruşturma…) `"2025/9101(Ceza Dava Dosyası)"` başlıklarıyla gruplar, `son20Evrak` ana dosyanın son 20 evrakıdır. **`evrakId` ve `dosyaId` her yanıtta yeniden şifrelenir** (aynı evrak her istekte farklı kimlikle gelir), bu yüzden evrak `birimEvrakNo|onaylandigiTarih|tur` anahtarıyla tanınır; bu alanlardan biri eksikse evrak tahminle eşleştirilmez, özette sayılır. Görülen anahtarlar kayıtta `evrakSeen`, yeniler `yeniEvrak` olarak tutulur; "Görüldü" zamanları ayrı `uhdEvrakGoruldu` anahtarındadır (güncelleme sürerken indeksle yarışmasın diye).
 - **Kesintisiz güncelleme**: Güncelleme bir iş kaydıdır (`uhdJob`: aşama, istatistikler). Yürüten sekme `uhdProgress.owner/beat` ile sinyal verir; indeks her 10 dosyada bir kaydedilir. Sekme yenilenirse `sessionStorage`'daki sekme kimliğinden işin kendisinde olduğunu anlayıp hemen sürdürür; sekme kapanırsa `background.js` (`tabs.onRemoved`) işi serbest bırakır ve açık başka UYAP sekmesi devralır; sinyal 90 sn gelmezse her UYAP sekmesi 20 sn'de bir devralmayı dener (aynı anda birden çok sekme denerse son yazan kazanır, diğerleri çekilir). Oturum düşmesi işi `paused: 'oturum'` ile duraklatır; bir sonraki sayfa yüklemesinde (yeniden girişten sonra) liste tazelenip sürer. Sekme arka plandayken Chrome zamanlayıcıları yavaşlattığı için istekler arası 150 ms bekleme yalnız sekme görünürken yapılır; istekler her durumda sırayla, birer birer gider.
+- **Duruşmalar** (Güncelle'nin liste adımından hemen sonra): `avukat_durusma_sorgula_brd.ajx {baslangicTarihi, bitisTarihi}` ("gg.aa.yyyy"), 30'ar günlük iki sorgu. Yanıt kayıt dizisidir; `birimId|dosyaNo|dosyaTurKod` indeks anahtarıyla aynıdır. `tarihSaat` "yyyy-mm-dd ss:dd:ss.s" biçimindedir. `dosyaTaraflari` içindeki `isVekil` kaydı avukatın kendisidir ve saklanmaz; `dosyaId` ve `token` saklanmaz. Sonuç `uhdDurusmalar` anahtarındadır.
+- **Evrakı açma**: `list_dosya_evraklar.ajx` ile evrak yeniden alınır (önce kayıttaki `dosyaId`, olmazsa `search_phrase_detayli.ajx` ile taze kimlik), evrak anahtarla bulunur ve `GET /view_document_brd.uyap?evrakId=…&dosyaId=…` (URL kodlanmış, evrak kaydındaki `dosyaId`; kabul edilmezse sorgudaki) ile alınır. Yanıt `application/pdf`; `blob:` adresiyle kapalı gölge DOM'daki pencerede gösterilir. UYAP sayfasında CSP yoktur (yalnız `X-Frame-Options: SAMEORIGIN`).
 - **Arama**: tamamen yerel; yazarken UYAP'a istek gitmez.
 - **Dosya açma**: `/dosya-sorgulama?mode=detayli&yargiTur=…&yargiBirimi=…&dosyaDurum=…` adresi formu hazır doldurur (form yeniden kurulsun diye önce boş bir yola geçilir). Eklenti alanları doğrular, **Sorgula**'ya basar, sonuç tablosunda satırı bulur ve `aria-label="Pencere Görünümü"` düğmesine tıklar. Adımlar konsola `[Legaluga]` önekiyle yazılır; açılamazsa bildirim tablo teşhisini (satır/düğme sayısı) gösterir.
 - **Açılış duyurusu**: UYAP girişte `sessionStorage.showPopupDuyuru2 = "true"` yapar; eklenti bunu "Tekrar Gösterme" düğmesinin yaptığı gibi `"false"` yapar. Ayarlardan kapatılabilir. KVKK rıza penceresine dokunulmaz.
@@ -168,7 +189,7 @@ Düğme bularak açma akışı için sahte UYAP:
 python tests/sahte-uyap/server.py extension 8765
 ```
 
-`http://localhost:8765` açılır; sayfa `chrome.*` API'sini taklit eder. Sahte sunucu evrak listesinde kimlikleri her yanıtta rastgele üretir ve her 4 dosyadan birine her sorguda bir evrak ekler; iki güncellemeden sonra "Yeni evrak" görünür. Konsolda `await __uhdSend({type:'uhd-update'})` indeks kurar, `__uhdSend({type:'uhd-open', record})` dosya açar. `localStorage.uyapLike = 1` tabloyu ve düğmeleri gerçek UYAP gibi kimliksiz ve sütun gizlemeli çizer; `localStorage.narrow = 1` dar ekranı, `localStorage.ignoreParams = 1` adres parametrelerini yok sayan formu dener.
+`http://localhost:8765` açılır; sayfa `chrome.*` API'sini taklit eder. Sahte sunucu duruşma listesi ve evrak görüntüleme (küçük bir PDF) da verir; `localStorage.openShadow = 1` paneli betikle sınanabilsin diye açık gölge DOM'la kurar. Sahte sunucu evrak listesinde kimlikleri her yanıtta rastgele üretir ve her 4 dosyadan birine her sorguda bir evrak ekler; iki güncellemeden sonra "Yeni evrak" görünür. Konsolda `await __uhdSend({type:'uhd-update'})` indeks kurar, `__uhdSend({type:'uhd-open', record})` dosya açar. `localStorage.uyapLike = 1` tabloyu ve düğmeleri gerçek UYAP gibi kimliksiz ve sütun gizlemeli çizer; `localStorage.narrow = 1` dar ekranı, `localStorage.ignoreParams = 1` adres parametrelerini yok sayan formu dener.
 
 ## Sürüm yayınlama
 

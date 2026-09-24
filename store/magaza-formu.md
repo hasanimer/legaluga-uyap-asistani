@@ -32,6 +32,8 @@ NASIL ÇALIŞIR
 • Kesintisiz güncelleme: güncelleme sürerken başka sekmelerde çalışabilirsiniz; sekme kapanır ya da oturum düşerse kaldığı yerden sürer
 • Yeni evrak takibi: her güncellemede açık dosyalarınıza gelen yeni evrakları (tür, onay tarihi, gönderen) listeler
 • Müvekkillerinizi otomatik tanır, ayrı gösterir; yalnız müvekkil adlarında arama
+• Duruşma takvimi: sonraki 60 günün duruşmaları dosya kartında ve günlere göre listede; bugünkü duruşma hatırlatması; takvime aktarma (.ics)
+• Evrakı açma: yeni ya da son evrakı tek tıkla UYAP'tan getirip görüntüleme
 • Süre hatırlatıcı: tebligat için süre ve son gün girin; yaklaşan süreler panelde ve UYAP açılışında hatırlatılır
 • Müvekkil kartı: bir taraf adına tıklayın, o kişinin tüm dosyaları ve rolleri tek ekranda
 • Karşı taraf vekiliyle arama
@@ -46,7 +48,7 @@ NASIL ÇALIŞIR
 GİZLİLİK
 • Sunucu yok, hesap yok. Verileriniz hiçbir sunucuya gönderilmez.
 • Yazarken UYAP'a istek gitmez; UYAP'tan veri yalnız "Güncelle"ye bastığınızda alınır.
-• UYAP şifrenize, e-imzanıza, evrakların kendisine veya içeriklerine erişilmez; yalnız evrak listesi bilgisi alınır.
+• UYAP şifrenize ve e-imzanıza erişilmez. Evrak yalnız siz "Aç"a bastığınızda UYAP'tan alınıp ekranda gösterilir; saklanmaz.
 • Ayarlar → "Tüm verileri sil" ile her şey tek tıkla silinir.
 
 YETKİLER VE GEREKÇELERİ
@@ -87,7 +89,7 @@ Avukatın UYAP Avukat Portalı'ndaki kendi dosyalarını ad, soyad, dosya numara
 
 **Veri kullanımı — işaretlenecek veri türleri:**
 - ☑ **Kişisel tanımlayıcı bilgiler** (Personally identifiable information): Dosya taraflarının ve vekillerinin adları. Yalnızca cihazda saklanır, iletilmez.
-- ☑ **Web sitesi içeriği** (Website content): UYAP'tan alınan dosya numarası, mahkeme adı, dosya türü ve durum bilgileri; açık dosyaların evrak listesi (evrak türü, onay ve gönderim tarihi, gönderen, açıklama, birim evrak no). Evrakların kendisi alınmaz. Yalnızca cihazda saklanır, iletilmez.
+- ☑ **Web sitesi içeriği** (Website content): UYAP'tan alınan dosya numarası, mahkeme adı, dosya türü ve durum bilgileri; açık dosyaların evrak listesi (evrak türü, onay ve gönderim tarihi, gönderen, açıklama, birim evrak no); duruşma listesi (tarih, saat, mahkeme, işlem, taraf adları). Kullanıcı "Aç"a bastığında evrak içeriği UYAP'tan alınıp yalnız ekranda gösterilir, saklanmaz. Hepsi yalnızca cihazda kalır, iletilmez.
 - Diğerleri (sağlık, finans, kimlik doğrulama, kişisel iletişim, konum, web geçmişi, kullanıcı etkinliği) işaretlenmez.
 
 > Not: Veriler cihazdan çıkmasa da eklenti bu verileri işlediği için beyan ediyoruz. Eksik beyan, fazla beyandan daha büyük bir ret sebebidir.

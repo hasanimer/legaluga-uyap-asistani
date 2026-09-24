@@ -9,13 +9,14 @@
   if (window.__uhdLoaded) return;
   window.__uhdLoaded = true;
 
-  const { TURLER, norm, openPath, parseEvraklar, diffEvrak, sonEvrak } = globalThis.UHD;
+  const { TURLER, norm, openPath, parseEvraklar, diffEvrak, sonEvrak, evrakKey, parseDurusma, uyapDate } = globalThis.UHD;
   const OWNER = Math.random().toString(36).slice(2);
   const DELAY = 150;
   const TARAF_V = 2; // 2: taraflarla birlikte vekiller de saklanır
   const EVRAK_PAGES = 20;   // bir dosyanın evrak listesinde en çok bu kadar sayfa okunur
   const YENI_MAX = 50;      // dosya başına saklanan görülmemiş yeni evrak sayısı
-  const STALE_MS = 90000;   // bu süre sinyal gelmezse güncellemeyi yürüten sekme gitmiş sayılır
+  const STALE_MS = 90000;
+  const DURUSMA_GUN = 60;   // güncellemede bugünden itibaren bu kadar günün duruşmaları alınır (30'ar günlük sorgularla)   // bu süre sinyal gelmezse güncellemeyi yürüten sekme gitmiş sayılır
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pad = n => String(n).padStart(2, '0');
   const visible = e => !!e && e.isConnected && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
@@ -239,6 +240,27 @@
     return { items, bad: skipped };
   }
 
+  async function fetchDurusmalar() {
+    const byId = new Map();
+    const day = 86400000;
+    const start = new Date();
+    for (let w = 0; w < DURUSMA_GUN; w += 30) {
+      checkStop();
+      const from = new Date(start.getTime() + w * day);
+      const to = new Date(start.getTime() + Math.min(w + 29, DURUSMA_GUN - 1) * day);
+      const res = await api('avukat_durusma_sorgula_brd.ajx', { baslangicTarihi: uyapDate(from), bitisTarihi: uyapDate(to) });
+      if (res != null && !Array.isArray(res)) throw new Error('Beklenmeyen duruşma yanıtı.');
+      for (const x of res || []) {
+        const d = parseDurusma(x);
+        if (d) byId.set(d.id, d);
+      }
+      await pace();
+    }
+    const list = [...byId.values()];
+    await chrome.storage.local.set({ uhdDurusmalar: { at: Date.now(), gun: DURUSMA_GUN, list } });
+    return list.length;
+  }
+
   async function saveJob(j) {
     const { uhdJob: cur } = await chrome.storage.local.get('uhdJob');
     if (cur && cur.id === j.id && !cur.stop) await chrome.storage.local.set({ uhdJob: j });
@@ -328,6 +350,21 @@
         await saveJob(j);
       }
 
+      // 2b) Duruşmalar (UYAP'ın Duruşma Sorgula ekranının isteği): birkaç istek, bir kez.
+      if (!j.durusmaDone) {
+        checkStop();
+        await setProgress({ running: true, phase: 'durusma', text: 'Duruşmalar alınıyor…' });
+        try {
+          st.durusma = await fetchDurusmalar();
+        } catch (e) {
+          if (e instanceof Fatal) throw e;
+          st.durusmaErr = true;
+          log('Duruşmalar alınamadı:', e.message);
+        }
+        j.durusmaDone = true;
+        await saveJob(j);
+      }
+
       // 3) Taraf adları: yeni dosyalar, vekil bilgisi olmayan eski kayıtlar (veya "Tümünü yenile"de bu işte
       //    henüz yenilenmemiş hepsi).
       const need = [...merged.values()].filter(r => j.full ? (r.tarafAt || 0) < startedAt : (!r.taraflar || r.tarafV !== TARAF_V));
@@ -397,6 +434,8 @@
       if (st.evrakErrors) summary += `, ${st.evrakErrors} dosyanın evrakları alınamadı`;
       if (st.evrakBad) summary += `, ${st.evrakBad} evrakta kimlik/tarih eksik olduğu için karşılaştırılamadı`;
       if (st.failed) summary += `, ${st.failed} sorgu grubu hata verdi (eski kayıtlar korundu)`;
+      if (st.durusma) summary += `; ${DURUSMA_GUN} gün içinde ${st.durusma} duruşma`;
+      if (st.durusmaErr) summary += '; duruşmalar alınamadı (önceki liste korundu)';
       summary += '.';
       await chrome.storage.local.remove('uhdJob');
       await setProgress({ running: false, final: true, text: summary, endedAt: Date.now(), startedAt });
@@ -731,9 +770,16 @@
 .toast button.close{border:0;font-size:18px;line-height:1;padding:0 2px;opacity:.8}
 .toast.err{background:#8a1f17}.toast.ok{background:#12805c}
 .panel:not([hidden]) ~ .toast{right:calc(min(480px,100vw) + 16px)}
+.viewer{position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:4;display:flex;align-items:center;justify-content:center}
+.viewer .box{background:#fff;width:min(1000px,96vw);height:92vh;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35);font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#1d2939}
+.viewer .bar{display:flex;gap:10px;align-items:center;padding:10px 12px;background:${BRAND.primary};color:#fff}
+.viewer .bar b{flex:1;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.viewer .bar a,.viewer .bar button{color:#fff;border:1px solid rgba(255,255,255,.6);background:none;border-radius:6px;padding:4px 10px;font:inherit;cursor:pointer;text-decoration:none}
+.viewer iframe{flex:1;border:0;width:100%}
+.viewer .msg{padding:28px;color:#344054}
 [hidden]{display:none!important}
 `;
-  let panel, ui, toastEl, toastTimer;
+  let panel, ui, toastEl, toastTimer, shadowRoot;
 
   function mountPage() {
     const host = document.createElement('div');
@@ -745,9 +791,11 @@
     panel = el('div', { class: 'panel', hidden: true });
     toastEl = el('div', { class: 'toast', hidden: true });
     shadow.append(el('style', null, PAGE_CSS), launch, panel, toastEl);
+    shadowRoot = shadow;
     ui = mountUI(panel, {
       mode: 'page',
       onOpen: r => openFile(r),
+      onOpenEvrak: (r, k) => openEvrak(r, k),
       onUpdate: async full => {
         const res = await startUpdate(full);
         if (!res.ok) ui.setNotice(res.error, 'err');
@@ -766,6 +814,118 @@
   }
 
   function hidePanel() { if (panel) panel.hidden = true; }
+
+  // ---------------------------------------------------------------- Evrakı açma
+  // Evrak kimlikleri her yanıtta yeniden şifrelendiği için saklanmaz: açarken dosyanın evrak listesi yeniden
+  // alınır, evrak anahtarıyla (birim evrak no + onay tarihi + tür) bulunur ve UYAP'ın kendi görüntüleme
+  // adresinden getirilip sayfa içinde gösterilir. Evrak içeriği saklanmaz; pencere kapanınca bellekten atılır.
+
+  async function rawEvraklar(dosyaId) {
+    const ok = r => r && typeof r === 'object' && !Array.isArray(r) && (r.tumEvraklar || r.son20Evrak);
+    const out = [];
+    let res = await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: 1 });
+    if (!ok(res)) throw new Error('Evrak listesi alınamadı.');
+    const pages = Math.min(Number(res.pageTotal) || 1, EVRAK_PAGES);
+    for (let page = 1; ; page++) {
+      if (res.tumEvraklar && typeof res.tumEvraklar === 'object') {
+        for (const arr of Object.values(res.tumEvraklar)) if (Array.isArray(arr)) out.push(...arr);
+      } else if (Array.isArray(res.son20Evrak)) out.push(...res.son20Evrak);
+      if (page >= pages) break;
+      res = await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: page + 1 });
+      if (!ok(res)) break;
+    }
+    return out;
+  }
+
+  // Dosyanın bu oturumda geçerli kimliği: önce kayıttaki denenir, olmazsa dosya grubu yeniden sorgulanır.
+  async function freshDosyaId(rec) {
+    for (const birimId of [rec.birimId || '', '']) {
+      for (let page = 1; page <= 200; page++) {
+        const res = await api('search_phrase_detayli.ajx', {
+          dosyaDurumKod: rec.sorguDurum === 1 ? 1 : 0, pageSize: 500, pageNumber: page,
+          birimId, birimTuru2: rec.birimTuru2, birimTuru3: rec.yargiTuru
+        });
+        if (!Array.isArray(res) || !Array.isArray(res[0])) break;
+        const hit = res[0].find(d => `${d.birimId}|${d.dosyaNo}|${d.dosyaTurKod}` === rec.key);
+        if (hit) return hit.dosyaId;
+        if (res[0].length < 500 || page * 500 >= (Number(res[1]) || 0)) break;
+      }
+      if (!rec.birimId) break;
+    }
+    return null;
+  }
+
+  async function viewDocument(evrakId, dosyaId) {
+    const url = `/view_document_brd.uyap?evrakId=${encodeURIComponent(evrakId)}&dosyaId=${encodeURIComponent(dosyaId)}`;
+    const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
+    if (res.status === 401 || res.status === 403) throw new Fatal('UYAP oturumu kapanmış görünüyor.');
+    if (!res.ok) throw new Error(`UYAP evrakı vermedi (HTTP ${res.status}).`);
+    const type = (res.headers.get('Content-Type') || '').toLowerCase();
+    if (/json|html|text\//.test(type)) throw new Error('UYAP evrak yerine hata yanıtı döndü.');
+    return { blob: await res.blob(), type };
+  }
+
+  let evrakBusy = false;
+  async function openEvrak(rec, key) {
+    if (evrakBusy) return;
+    evrakBusy = true;
+    const title = `${rec.dosyaNo} ${rec.birimAdi}`;
+    try {
+      toast(`${title}\nEvrak UYAP'tan getiriliyor…`, 'busy');
+      let dosyaId = rec.dosyaId;
+      let list = null;
+      try { list = await rawEvraklar(dosyaId); } catch (e) { if (e instanceof Fatal) throw e; }
+      if (!list) {
+        dosyaId = await freshDosyaId(rec);
+        if (!dosyaId) throw new Error('Dosya UYAP’ta bulunamadı; Güncelle’ye basıp tekrar deneyin.');
+        list = await rawEvraklar(dosyaId);
+      }
+      const e = list.find(x => evrakKey(x) === key);
+      if (!e) throw new Error('Evrak dosyanın evrak listesinde bulunamadı; Güncelle’ye basıp tekrar deneyin.');
+      log('Evrak açılıyor:', e.tur);
+      let doc;
+      try { doc = await viewDocument(e.evrakId, e.dosyaId || dosyaId); }
+      catch (err) {
+        if (err instanceof Fatal || !e.dosyaId || e.dosyaId === dosyaId) throw err;
+        doc = await viewDocument(e.evrakId, dosyaId);   // evrak kaydındaki dosya kimliği kabul edilmezse sorgudaki
+      }
+      toastEl.hidden = true;
+      showViewer(rec, e, doc);
+    } catch (err) {
+      log('Evrak açılamadı:', err.message);
+      toast(`${title}\nEvrak açılamadı: ${err.message}`, 'err', 0, { label: 'Dosyayı aç', fn: () => openFile(rec) });
+    } finally {
+      evrakBusy = false;
+    }
+  }
+
+  function showViewer(rec, e, doc) {
+    const url = URL.createObjectURL(doc.blob);
+    const pdf = doc.type.includes('pdf');
+    const ext = pdf ? 'pdf' : doc.type.includes('tif') ? 'tif' : doc.type.includes('udf') ? 'udf' : 'bin';
+    const name = `${rec.dosyaNo} ${e.tur || 'evrak'} ${String(e.onaylandigiTarih || '').slice(0, 10)}`.replace(/[\\/:*?"<>|]+/g, '-') + '.' + ext;
+    const close = el('button', { title: 'Kapat (Esc)' }, 'Kapat');
+    const box = el('div', { class: 'box', role: 'dialog', 'aria-label': 'Evrak' },
+      el('div', { class: 'bar' },
+        el('b', null, `${e.tur || 'Evrak'} · ${e.onaylandigiTarih || ''} · ${rec.dosyaNo}`),
+        pdf ? el('a', { href: url, target: '_blank', rel: 'noopener' }, 'Yeni sekmede aç') : null,
+        el('a', { href: url, download: name }, 'İndir'),
+        close),
+      pdf ? el('iframe', { src: url, title: 'Evrak' })
+        : el('div', { class: 'msg' }, `Bu evrak ${doc.type || 'bilinmeyen'} biçiminde; tarayıcı doğrudan gösteremiyor. “İndir” ile kaydedip açabilir ya da dosyayı UYAP’ta açabilirsiniz.`));
+    const viewer = el('div', { class: 'viewer' }, box);
+    const done = () => {
+      viewer.remove();
+      document.removeEventListener('keydown', onKey, true);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);   // yeni sekmede açıldıysa yüklenmesine zaman tanı
+    };
+    const onKey = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); done(); } };
+    close.addEventListener('click', done);
+    viewer.addEventListener('click', ev => { if (ev.target === viewer) done(); });
+    document.addEventListener('keydown', onKey, true);
+    hidePanel();
+    shadowRoot.append(viewer);
+  }
 
   function toast(text, kind, ms, action) {
     if (!toastEl) return;
@@ -824,6 +984,7 @@
     if (!msg || typeof msg.type !== 'string') return;
     if (msg.type === 'uhd-ping') send({ ok: true });
     else if (msg.type === 'uhd-open') { openFile(msg.record); send({ ok: true }); }
+    else if (msg.type === 'uhd-open-evrak') { openEvrak(msg.record, msg.key); send({ ok: true }); }
     else if (msg.type === 'uhd-stop') { stopUpdate().then(() => send({ ok: true })); return true; }
     else if (msg.type === 'uhd-update') { startUpdate(msg.full).then(send); return true; }
   });
@@ -863,16 +1024,25 @@
   setInterval(() => maybeResume(false), 20000);
   setTimeout(() => maybeResume(true), 1500);
 
-  // Son günü 3 gün ya da daha az kalan (veya geçmiş) süreler: UYAP açılınca bu sekmede günde bir kez hatırlat.
-  chrome.storage.local.get('uhdSureler').then(({ uhdSureler }) => {
-    const { activeSureler, daysLeft, todayIso } = globalThis.UHD;
+  // UYAP açılınca bu sekmede günde bir kez: bugünkü duruşmalar ve son günü 3 gün ya da daha az kalan süreler.
+  chrome.storage.local.get(['uhdSureler', 'uhdDurusmalar']).then(({ uhdSureler, uhdDurusmalar }) => {
+    const { activeSureler, daysLeft, todayIso, upcomingDurusmalar } = globalThis.UHD;
+    if (ssGet('legalugaHatirlatma') === todayIso()) return;
     const yakin = activeSureler(uhdSureler).filter(s => daysLeft(s.bitis) <= 3);
-    if (!yakin.length || ssGet('legalugaSureGosterildi') === todayIso()) return;
-    ssSet('legalugaSureGosterildi', todayIso());
-    const s = yakin[0], d = daysLeft(s.bitis);
-    const kalan = d < 0 ? `${-d} gün geçti` : d === 0 ? 'bugün son gün' : d === 1 ? 'yarın son gün' : `${d} gün kaldı`;
-    toast(`${yakin.length > 1 ? `Süresi yaklaşan ${yakin.length} iş var. En yakını: ` : 'Süre yaklaşıyor: '}${s.dosyaNo} · ${s.baslik || 'Süre'} — ${kalan}.`, 'err', 0, {
-      label: 'Göster', fn: () => { panel.hidden = false; ui.showSureler(); }
+    const bugun = upcomingDurusmalar(uhdDurusmalar && uhdDurusmalar.list).filter(d => d.tarih === todayIso());
+    if (!yakin.length && !bugun.length) return;
+    ssSet('legalugaHatirlatma', todayIso());
+    const lines = [];
+    if (bugun.length) {
+      lines.push(`Bugün ${bugun.length} duruşma: ` + bugun.slice(0, 3).map(d => `${d.saat} ${d.dosyaNo}`).join(', ') + (bugun.length > 3 ? ' …' : ''));
+    }
+    if (yakin.length) {
+      const s = yakin[0], d = daysLeft(s.bitis);
+      const kalan = d < 0 ? `${-d} gün geçti` : d === 0 ? 'bugün son gün' : d === 1 ? 'yarın son gün' : `${d} gün kaldı`;
+      lines.push(`${yakin.length > 1 ? `Süresi yaklaşan ${yakin.length} iş; en yakını: ` : 'Süre yaklaşıyor: '}${s.dosyaNo} · ${s.baslik || 'Süre'} — ${kalan}`);
+    }
+    toast(lines.join('\n'), yakin.length ? 'err' : 'ok', 0, {
+      label: 'Göster', fn: () => { panel.hidden = false; yakin.length ? ui.showSureler() : ui.showDurusmalar(); }
     });
   });
 

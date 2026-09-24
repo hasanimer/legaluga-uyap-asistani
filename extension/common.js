@@ -246,7 +246,7 @@
       const ts = trDateTs(i.onay);
       if (ts > bestTs) { best = i; bestTs = ts; }
     }
-    return best && { tur: best.tur, onay: best.onay, gonderim: best.gonderim, dosya: best.dosya };
+    return best && { k: best.k, tur: best.tur, onay: best.onay, gonderim: best.gonderim, dosya: best.dosya };
   }
 
   // Kayıtta sonEvrak yoksa (1.1.0'da taranmış dosyalar) görülen evrak anahtarlarından çıkarılır:
@@ -256,7 +256,7 @@
     if (!Array.isArray(r.evrakSeen) || !r.evrakSeen.length) return null;
     return sonEvrak(r.evrakSeen.map(k => {
       const [, onay, ...tur] = String(k).split('|');
-      return { onay, tur: tur.join('|') };
+      return { k, onay, tur: tur.join('|') };
     }));
   }
 
@@ -332,6 +332,65 @@
     .filter(s => s && !s.done && isoToUtc(s.bitis))
     .sort((a, b) => (a.bitis < b.bitis ? -1 : a.bitis > b.bitis ? 1 : 0));
 
+  // ------------------------------------------------ duruşmalar
+  // avukat_durusma_sorgula_brd.ajx kaydı → yerel kayıt. Dosya anahtarı indeksle aynıdır (birimId|dosyaNo|dosyaTurKod).
+  // Taraf listesindeki vekil kaydı (isVekil) avukatın kendisidir; saklanmaz.
+  function parseDurusma(x) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String((x && x.tarihSaat) || ''));
+    if (!m || !x.dosyaNo) return null;
+    const str = v => (v == null ? '' : String(v)).trim();
+    return {
+      id: str(x.kayitId) || `${x.birimId}|${x.dosyaNo}|${m[0]}`,
+      key: `${x.birimId}|${x.dosyaNo}|${x.dosyaTurKod}`,
+      dosyaNo: str(x.dosyaNo),
+      birimAdi: str(x.yerelBirimAd),
+      dosyaTur: str(x.dosyaTurKodAciklama),
+      tarih: `${m[1]}-${m[2]}-${m[3]}`,
+      saat: `${m[4]}:${m[5]}`,
+      islem: str(x.islemTuruAciklama) || 'Duruşma',
+      sonuc: str(x.islemSonucuAciklama),
+      taraflar: (Array.isArray(x.dosyaTaraflari) ? x.dosyaTaraflari : [])
+        .filter(t => t && !t.isVekil)
+        .map(t => ({ ad: [str(t.isim), str(t.soyad)].filter(Boolean).join(' '), sifat: str(t.sifat) }))
+        .filter(t => t.ad)
+    };
+  }
+
+  // Bugünden itibaren (bugün dahil) duruşmalar, tarih ve saate göre.
+  const upcomingDurusmalar = (list, today = todayIso()) => (list || [])
+    .filter(d => d && d.tarih >= today)
+    .sort((a, b) => (a.tarih + a.saat < b.tarih + b.saat ? -1 : a.tarih + a.saat > b.tarih + b.saat ? 1 : 0));
+
+  // UYAP'ın beklediği "gg.aa.yyyy".
+  const uyapDate = d => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+
+  // Takvim dosyası (.ics). Türkiye saati yıl boyu UTC+3 olduğu için saatler UTC'ye çevrilir. Taraf adları
+  // takvim hizmetlerine (ör. bulut takvim) gidebileceği için yazılmaz; yalnız dosya no, birim ve işlem.
+  function durusmaIcs(list, now = new Date()) {
+    const esc = s => String(s || '').replace(/[\\;,]/g, c => '\\' + c).replace(/\r?\n/g, '\\n');
+    const utc = (tarih, saat, plusMin = 0) => {
+      const [y, mo, d] = tarih.split('-').map(Number);
+      const [h, mi] = saat.split(':').map(Number);
+      const t = new Date(Date.UTC(y, mo - 1, d, h - 3, mi + plusMin));
+      return `${t.getUTCFullYear()}${pad2(t.getUTCMonth() + 1)}${pad2(t.getUTCDate())}T${pad2(t.getUTCHours())}${pad2(t.getUTCMinutes())}00Z`;
+    };
+    const stamp = `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}T${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}00Z`;
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Legaluga//UYAP Asistani//TR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+    for (const d of list || []) {
+      lines.push('BEGIN:VEVENT',
+        `UID:${esc(String(d.id).replace(/[^\w.-]/g, '-'))}@legaluga-uyap-asistani`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${utc(d.tarih, d.saat)}`,
+        `DTEND:${utc(d.tarih, d.saat, 60)}`,
+        `SUMMARY:${esc(`${d.islem}: ${d.dosyaNo} ${d.birimAdi}`)}`,
+        `DESCRIPTION:${esc(`${d.dosyaTur}${d.sonuc ? ' · ' + d.sonuc : ''} (UYAP'tan alındı; saati UYAP'ta teyit edin)`)}`,
+        `LOCATION:${esc(d.birimAdi)}`,
+        'END:VEVENT');
+    }
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n') + '\r\n';
+  }
+
   const isTebligat = tur => /tebli[gğ]/i.test(String(tur || ''));
 
   const unseenEvrak = (r, goruldu) => (r.yeniEvrak || []).filter(y => (y.at || 0) > ((goruldu && goruldu[r.key]) || 0));
@@ -349,5 +408,5 @@
   const fmtNum = n => Number(n || 0).toLocaleString('tr-TR');
   const fmtDate = ts => ts ? new Date(ts).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat };
+  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, parseDurusma, upcomingDurusmalar, uyapDate, durusmaIcs };
 })();
