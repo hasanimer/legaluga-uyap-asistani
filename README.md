@@ -39,16 +39,6 @@
 
 Dosyaları açık/kapalı ve yargı türüne göre süzebilir, aynı kişiye ait dosyaları bir arada görebilir, kendinize not ve süre hatırlatıcısı ekleyebilirsiniz.
 
-## Haciz yardımcısı
-
-İcra dosyasında takibi kesinleşmiş bir borçlu seçtiğinizde, eklenti penceresindeki veya sayfa kenarındaki **Dosya Ara** panelindeki **Haciz** düğmesiyle hazırlama ekranını açabilirsiniz. Yan panelden açılan pencere ilgili UYAP sekmesine bağlı çalışır. EGM, icra dosyası, TAKBİS, banka ve maaşın 1/4'ü seçeneklerinden istediklerinizi seçebilirsiniz. Akış talep evrakını oluşturduğunda durur; **gönderme ve imza işlemi size aittir**.
-
-**Maaş haczi:** UYAP'ta ilgili borçlunun **SSK Çalışanı** sorgu sonucunu açın. Haciz ekranında **Maaşın 1/4'ü** seçeneğini ve çalışma durumunu seçin. Eklenti, açık SGK sonucunda tek aktif işyeri varsa unvanını ve vergi numarasını yalnız işlem sırasında okur; maaş veren kurum dosyada yoksa UYAP'ın kurum sorgusuyla eklemeyi dener. Sonuç belirsizse veya kurum bilgileri uyuşmazsa durur. Mevcut kurumu seçmek için adını kutuya aynen yazabilirsiniz. UYAP'ın oluşturduğu talebi ve evrakı kontrol edin.
-
-Haciz hazırlama ekranı Legaluga'nın arayüzünü ve ortak açık/koyu/sistem tema ayarını kullanır. **1.11.1** sürümündedir. Chrome Web Mağazası'nda daha eski bir sürüm görünüyorsa bu özellik için kaynak koddan kurulum gerekir.
-
-Ücretli sorgu onayı başlangıçta kapalıdır. Seçimlerinizi, UYAP'ın uyarılarını ve oluşturulan evrakı işlemden önce kontrol edin. Haciz modülü [Çağrı Şahin'in MIT lisanslı UYAP Haciz Yardımcısı](https://github.com/SCgrS/UYAP-Haciz-Yardimcisi) projesinden uyarlanmıştır; [özgün lisans bildirimi](haciz/LICENSE) korunmuştur.
-
 ## Kurulum
 
 1. **[Chrome Web Mağazası'nda aç →](https://chromewebstore.google.com/detail/legaluga-uyap-asistan%C4%B1/aicknihmpdcbfgidifffinnbgbghkmcn?hl=tr)** bağlantısına gidip **Chrome'a ekle**'ye basın.

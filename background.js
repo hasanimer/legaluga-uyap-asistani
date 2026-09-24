@@ -2,27 +2,13 @@
 // (content.js) onu kaldığı yerden devralır. Kapanan sayfa bunu kendisi her zaman yazamıyor.
 // Ağ isteği yapmaz, veri okumaz; yalnız hangi sekmenin güncellemeyi yürüttüğünü (sekme numarası) tutar.
 
-// MIT lisanslı UYAP Haciz Yardımcısı'nın isteğe bağlı haciz hazırlama akışı.
-importScripts('haciz/background.js');
+// Kaldırılan modülün eski tercih ve geçici kayıtlarını güncellemede temizle.
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.storage.local.remove('ubh_prefs');
+  await chrome.storage.session.remove(['ubh_banks', 'ubh_progress']);
+});
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg?.type === 'uhd-haciz-open') {
-    const tab = sender.tab;
-    if (!Number.isInteger(tab?.id) || !tab.url?.startsWith('https://avukat.uyap.gov.tr/')) {
-      sendResponse({ ok: false, error: 'Haciz ekranını UYAP sekmesindeki panelden açın.' });
-      return false;
-    }
-    // Ayrı pencere açıldığında etkin sekme değişir; işlemi kaynak UYAP
-    // sekmesine bağlayarak başka dosyada başlamasını önle.
-    chrome.windows.create({
-      url: chrome.runtime.getURL('haciz/popup.html') + '?tabId=' + tab.id,
-      type: 'popup', width: 500, height: 700, focused: true
-    }).then(
-      opened => sendResponse({ ok: Number.isInteger(opened?.id) }),
-      () => sendResponse({ ok: false, error: 'Haciz penceresi açılamadı. Tekrar deneyin.' })
-    );
-    return true;
-  }
+chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg && msg.type === 'uhd-owner' && sender.tab) {
     chrome.storage.session.set({ uhdOwnerTab: { tabId: sender.tab.id, owner: msg.owner } });
   }

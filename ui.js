@@ -270,14 +270,13 @@
     const statusText = el('div', { class: 'stx' });
     const btnUpdate = el('button', { class: 'btn sm primary' }, icon('sync'), el('span', null, 'Güncelle'));
     const btnStop = el('button', { class: 'btn sm danger', hidden: true }, icon('stop'), el('span', null, 'Durdur'));
-    const btnHaciz = opts.onHaciz ? el('button', { class: 'btn sm', title: 'Açık icra dosyasında haciz talebi hazırla' }, 'Haciz') : null;
     const btnSettings = el('button', { class: 'ib', title: 'Ayarlar', 'aria-label': 'Ayarlar' }, icon('gear'));
     const root = el('div', { class: 'uhd ' + (opts.mode || '') },
       el('header', null, el('strong', null, BRAND.name), count,
         opts.onClose ? el('button', { class: 'x', title: 'Kapat', onclick: opts.onClose }, '×') : null),
       el('div', { class: 'search' }, input, btnQClear, btnHelp),
       filters, notice, list, settings, status,
-      el('footer', null, statusText, btnStop, btnUpdate, btnHaciz, btnSettings));
+      el('footer', null, statusText, btnStop, btnUpdate, btnSettings));
     container.append(el('style', null, CSS), root);
 
     let records = [];
@@ -1347,7 +1346,6 @@
       setNotice('Aranan yerler: dosya no, mahkeme, dosya türü, taraf adları, karşı taraf vekilleri (Ayarlar’dan kapatılabilir) ve notlarınız. Türkçe karakter gerekmez. Birden çok kelime yazarsanız hepsi aranır; aynı yerde geçenler (ör. mahkeme adında) önce gelir.', '', { label: 'Tamam', fn: () => setNotice('') });
     });
     btnUpdate.addEventListener('click', () => { setNotice(''); opts.onUpdate(false); });
-    if (btnHaciz) btnHaciz.addEventListener('click', opts.onHaciz);
     btnStop.addEventListener('click', async () => {
       if (running()) return opts.onStop();
       // Yürüten sekme yok: duraklamış işi doğrudan iptal et (popup'ta açık UYAP sekmesi olmayabilir).

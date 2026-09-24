@@ -1,16 +1,7 @@
 const { ORIGIN, openPath, mountUI } = UHD;
 const UYAP_MATCH = ORIGIN + '/*';
-const sourceTabId = new URLSearchParams(window.location.search).get('tabId');
-if (sourceTabId !== null) document.documentElement.dataset.window = 'true';
 
 async function uyapTab() {
-  if (sourceTabId !== null) {
-    if (!/^\d+$/.test(sourceTabId) || !Number.isSafeInteger(Number(sourceTabId))) return null;
-    try {
-      const source = await chrome.tabs.get(Number(sourceTabId));
-      return source.url?.startsWith(ORIGIN + '/') ? source : null;
-    } catch { return null; }
-  }
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (active && active.url && active.url.startsWith(ORIGIN + '/')) return active;
   const tabs = await chrome.tabs.query({ url: UYAP_MATCH });
@@ -113,7 +104,6 @@ const ui = mountUI(document.getElementById('app'), {
   onOpen: openRecord,
   onOpenEvrak: openEvrak,
   onDosyaPanel: dosyaPanel,
-  onHaciz: () => { window.location.href = chrome.runtime.getURL('haciz/popup.html') + window.location.search; },
   onUpdate: update,
   onStop: stop
 });

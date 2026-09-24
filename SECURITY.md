@@ -6,7 +6,7 @@ Legaluga UYAP Asistanı'nda bir güvenlik açığı bulduysanız lütfen bunu he
 
 | Sürüm | Güvenlik düzeltmeleri |
 | --- | --- |
-| En güncel kaynak sürümü (`1.11.x`) | Destekleniyor |
+| En güncel kaynak sürümü (`1.12.x`) | Destekleniyor |
 | Önceki sürümler | Desteklenmiyor; lütfen güncelleyin |
 
 Chrome Web Mağazası'ndaki sürüm kaynak depodaki sürümden farklı olabilir. Bildiriminizde kullandığınız sürümü belirtin.
