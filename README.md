@@ -7,6 +7,74 @@ Sunucusu yoktur. Veriler yalnız kullanıcının bilgisayarında (`chrome.storag
 - Chrome Web Mağazası öğesi: `aicknihmpdcbfgidifffinnbgbghkmcn` (yayıncı `92d486e7-f6aa-45a5-941f-24189e231a84`)
 - Gizlilik politikası: https://legaluga.com/gizlilik/uyap-asistani (kaynağı Legaluga deposunda: `apps/web/app/gizlilik/uyap-asistani/page.tsx`)
 
+## Kurulum
+
+Chrome Web Mağazası'nda yayınlandığında mağaza sayfasından **Chrome'a ekle** ile kurulur. O zamana kadar:
+
+1. Bu sayfada **Code → Download ZIP** ile depoyu indirin ve bir klasöre çıkarın (OneDrive gibi eşitlenen klasörler yerine örn. `C:\Legaluga\`).
+2. Chrome'da `chrome://extensions` adresini açın, sağ üstten **Geliştirici modu**nu açın.
+3. **Paketlenmemiş öğe yükle** → çıkardığınız klasördeki `extension` klasörünü seçin.
+4. Araç çubuğundaki yapboz simgesinden **Legaluga UYAP Asistanı**'nı sabitleyin.
+
+Klasörü silmeyin ya da taşımayın; Chrome eklentiyi oradan çalıştırır.
+
+## Kullanım
+
+### 1. İlk güncelleme (bir kez)
+
+1. [UYAP Avukat Portalı](https://avukat.uyap.gov.tr)'na e-imza ile giriş yapın.
+2. Eklenti simgesine tıklayın ya da UYAP sayfasının sağ kenarındaki **Dosya Ara** şeridine basın.
+3. **Güncelle**'ye basın. Eklenti tüm açık ve kapalı dosyalarınızı, ardından taraf ve vekil adlarını UYAP'tan alır. Dosya sayısına göre birkaç dakika sürebilir; bu sırada UYAP sekmesini kapatmayın (popup'ı kapatabilirsiniz). **Durdur** ile yarıda kesebilirsiniz; o ana kadar alınan taraf bilgileri korunur ve sonraki **Güncelle** kaldığı yerden devam eder.
+
+Sonraki güncellemelerde yalnız yeni ve eksik dosyaların taraf bilgileri alınır, bu yüzden çok daha kısa sürer. Liste 7 günden eskiyse eklenti hatırlatır. **Tümünü yenile** her şeyi baştan alır.
+
+### 2. Arama
+
+Arama kutusuna yazmaya başlayın; sonuçlar anında gelir ve yazarken UYAP'a istek gitmez.
+
+| Yazdığınız | Örnek |
+| --- | --- |
+| Taraf adı / soyadı | `yılmaz`, `ayşe yıl` |
+| Dosya numarası | `2025/123`, `123` |
+| Mahkeme / birim | `ankara 14 asliye hukuk`, `icra` |
+| Karşı taraf vekili | vekilin adı |
+| Kendi notunuz | notta geçen bir kelime |
+
+- Birden çok kelime yazarsanız hepsini içeren dosyalar gelir; sıra önemsizdir.
+- Türkçe karakter gerekmez: `sukru` = `Şükrü`, `IŞIK` = `ışık`.
+- Kutu boşken **Son açılanlar** listelenir.
+
+**Filtreler:** **Açık / Kapalı** (dosya durumu), **Ceza / Hukuk / İcra / Diğer** (yargı türü; Diğer = İdari Yargı, Satış Memurluğu, Arabuluculuk, Tazminat Komisyonu), **Müvekkil** (yalnız müvekkil adlarında arar). Filtre seçip kutuyu boş bırakırsanız o gruptaki tüm dosyalar listelenir.
+
+**Müvekkil tespiti:** Sizin vekil olduğunuz taraflar sonuçta **Müvekkil** olarak ayrı gösterilir ve aramada öne çıkar. Adınız çoğu zaman otomatik bulunur; bulunamazsa **Ayarlar → Vekil adınız** alanına yazın (birden çok ad virgülle ayrılabilir).
+
+### 3. Dosyayı açma
+
+Sonuçta **Dosya Görüntüle**'ye basın (ya da ↑↓ ile seçip **Enter**). Eklenti UYAP'ın Dosya Sorgulama ekranını açar, yargı türü, birim ve durumu seçer, **Sorgula**'ya basar, tablodaki satırı bulur ve dosyayı **Pencere Görünümü**'nde açar. Adımlar sağ altta kısa bildirimlerle görünür.
+
+Dosya açılamazsa bildirimde nedeni yazar; Dosya Sorgulama ekranı yine doldurulmuş olarak kalır, satırı elle açabilirsiniz. Dosya yakın zamanda kapandı ya da taşındıysa önce **Güncelle**'ye basın.
+
+### 4. Diğer özellikler
+
+- **Kopyala:** Dosya künyesini (`Ankara 14. Asliye Hukuk Mahkemesi 2025/123 E.` biçiminde) panoya kopyalar; dilekçeye yapıştırmak için.
+- **Not ekle:** Dosyaya yalnız bu bilgisayarda görünen not yazın (Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer). Notlar aramada da bulunur.
+- **Excel'e aktar (CSV):** Ayarlar'dan tüm dosyaları taraflar, vekiller ve notlarla birlikte Excel'de açılabilen dosya olarak indirir.
+- **UYAP duyuru penceresi:** UYAP girişte her seferinde çıkan duyuru penceresi varsayılan olarak gizlenir. Görmek isterseniz Ayarlar'dan işareti kaldırın. KVKK onay penceresine dokunulmaz.
+- **Kısayol:** **Alt+Shift+D** eklentiyi açar. `chrome://extensions/shortcuts` adresinden değiştirebilirsiniz.
+
+### Verileriniz
+
+Dosya listesi, taraf adları, notlar ve ayarlar yalnız bu bilgisayarda Chrome'un eklenti deposunda tutulur; Legaluga'ya ya da başka bir sunucuya gönderilmez. Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve UYAP'a yalnız siz **Güncelle**'ye bastığınızda, sizin oturumunuzla, UYAP'ın kendi ekranlarının kullandığı istekleri yapar. **Ayarlar → Tüm verileri sil** her şeyi siler; eklentiyi kaldırmak da siler. Ayrıntı: [Gizlilik politikası](https://legaluga.com/gizlilik/uyap-asistani).
+
+### Sorun giderme
+
+| Durum | Çözüm |
+| --- | --- |
+| "UYAP sekmesi eklentiye yanıt vermedi" | UYAP sekmesini yenileyin (F5) ve tekrar deneyin. Eklentiyi yeni kurduysanız açık UYAP sekmeleri yenilenmeden çalışmaz. |
+| Güncelleme oturum hatasıyla durdu | UYAP oturumunuz düşmüş olabilir; yeniden giriş yapıp **Güncelle**'ye basın, kaldığı yerden devam eder. |
+| Aradığım dosya çıkmıyor | Yeni açılan dosyalar için **Güncelle**'ye basın; filtrelerin kapalı olduğunu kontrol edin. |
+| Dosya açılmıyor | Bildirimdeki mesajı ve Chrome konsolundaki (F12) `[Legaluga]` satırlarını info@legaluga.com'a gönderin. Ekran görüntüsünde müvekkil bilgisi varsa kapatın. |
+
 ## Yapı
 
 | Yol | Ne |
