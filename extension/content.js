@@ -16,7 +16,8 @@
   const EVRAK_PAGES = 20;   // bir dosyanın evrak listesinde en çok bu kadar sayfa okunur
   const YENI_MAX = 50;      // dosya başına saklanan görülmemiş yeni evrak sayısı
   const STALE_MS = 90000;
-  const ESZAMANLI = 3;      // taraf ve evrak adımlarında aynı anda en çok bu kadar istek (UYAP ekranları da paralel istek yapar)
+  const ESZAMANLI = 3;
+  const ARA_KAYIT_MS = 30000;  // yarıda kalırsa kaybolmasın diye ara kayıt sıklığı; büyük indekste sık yazmak paneli yavaşlatır      // taraf ve evrak adımlarında aynı anda en çok bu kadar istek (UYAP ekranları da paralel istek yapar)
   const DURUSMA_GUN = 60;   // güncellemede bugünden itibaren bu kadar günün duruşmaları alınır (30'ar günlük sorgularla)   // bu süre sinyal gelmezse güncellemeyi yürüten sekme gitmiş sayılır
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pad = n => String(n).padStart(2, '0');
@@ -283,6 +284,16 @@
     if (failed) throw failed;
   }
 
+  // Ara kayıt: dosya sayısına değil süreye bağlı; tüm indeks yazıldığı ve açık paneller yeniden çizildiği için
+  // binlerce dosyada her birkaç dosyada bir yazmak güncellemeyi ve paneli yavaşlatıyordu.
+  let lastCheckpoint = 0;
+  async function checkpoint(map, j) {
+    if (Date.now() - lastCheckpoint < ARA_KAYIT_MS) return;
+    lastCheckpoint = Date.now();
+    await saveIndex(map);
+    await saveJob(j);
+  }
+
   async function saveJob(j) {
     const { uhdJob: cur } = await chrome.storage.local.get('uhdJob');
     if (cur && cur.id === j.id && !cur.stop) await chrome.storage.local.set({ uhdJob: j });
@@ -290,6 +301,7 @@
 
   async function runUpdate(j) {
     const startedAt = j.startedAt;
+    lastCheckpoint = Date.now();
     const st = j.stats = { added: 0, errors: 0, evrakErrors: 0, evrakBad: 0, failed: 0, ...(j.stats || {}) };
     let merged = null;
     try {
@@ -404,7 +416,7 @@
           if (++streak >= 8) throw new Fatal('Taraf bilgileri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
         }
         done++;
-        if (done % 10 === 0) { await saveIndex(merged); await saveJob(j); }
+        await checkpoint(merged, j);
         await setProgress({ running: true, phase: 'taraf', done, total: need.length, phaseStart, text: `Taraf bilgileri alınıyor: ${done}/${need.length}` });
       });
       await saveIndex(merged);
@@ -433,7 +445,7 @@
             if (++eStreak >= 8) throw new Fatal('Evrak listeleri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
           }
           eDone++;
-          if (eDone % 10 === 0) { await saveIndex(merged); await saveJob(j); }
+          await checkpoint(merged, j);
           await setProgress({ running: true, phase: 'evrak', done: eDone, total: eneed.length, phaseStart: ePhaseStart, text: `Yeni evraklar kontrol ediliyor: ${eDone}/${eneed.length}` });
         });
         await saveIndex(merged);
