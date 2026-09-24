@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 createRequire(import.meta.url)('../extension/common.js');
-const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search, sonEvrak, lastEvrak, personFiles } = globalThis.UHD;
+const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search, sonEvrak, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat } = globalThis.UHD;
 
 // UYAP evrakId/dosyaId'yi her yanıtta yeniden şifreler; testte de her çağrıda farklı kimlik üretilir.
 let sayac = 0;
@@ -115,4 +115,42 @@ test('müvekkil kartı: aynı kişinin tüm dosyaları, rolleri; açık ve son e
   assert.deepEqual(f[0].roller, [{ rol: 'Mağdur', muvekkil: true }]);
   assert.deepEqual(f.find(x => x.r.key === 'karsi').roller, [{ rol: 'Davalı', muvekkil: false }]);
   assert.deepEqual(personFiles(records, '', 'Test Avukat'), []);
+});
+
+test('süre hatırlatıcı: takvim hesabı, kalan gün, uyarılar', () => {
+  assert.equal(addPeriod('2026-09-01', 2, 'hafta'), '2026-09-15');
+  assert.equal(addPeriod('2026-09-25', 10, 'gün'), '2026-10-05');
+  assert.equal(addPeriod('2026-01-31', 1, 'ay'), '2026-02-28');
+  assert.equal(addPeriod('2028-01-31', 1, 'ay'), '2028-02-29');
+  assert.equal(addPeriod('2026-12-15', 1, 'ay'), '2027-01-15');
+  assert.equal(addPeriod('', 2, 'hafta'), '');
+  assert.equal(addPeriod('2026-09-01', 0, 'gün'), '');
+  assert.equal(daysLeft('2026-09-30', '2026-09-24'), 6);
+  assert.equal(daysLeft('2026-09-20', '2026-09-24'), -4);
+  assert.equal(daysLeft('2026-03-30', '2026-03-28'), 2);   // yaz saati geçişinden etkilenmez
+  assert.equal(trToIso('05/09/2026'), '2026-09-05');
+  assert.equal(todayIso(new Date(2026, 8, 4, 23, 59)), '2026-09-04');
+  assert.deepEqual(sureUyarilari('2026-09-23'), []);                 // Çarşamba
+  assert.equal(sureUyarilari('2026-09-26').length, 1);               // Cumartesi
+  assert.equal(sureUyarilari('2026-07-20').length, 1);               // adli tatil başı (Pazartesi)
+  assert.equal(sureUyarilari('2026-08-29').length, 2);               // adli tatil + Cumartesi
+  assert.deepEqual(sureUyarilari('2026-09-01'), []);
+  assert.ok(isTebligat('Kapalı E-Tebliğ Mazbatası'));
+  assert.ok(isTebligat('TEBLIGAT'));
+  assert.ok(!isTebligat('Bilirkişi Raporu'));
+});
+
+test('süre hatırlatıcı: yalnız tamamlanmamışlar, en yakın önce; "Süreler" filtresi', () => {
+  const s = activeSureler({
+    a: { id: 'a', key: 'k1', bitis: '2026-10-10' },
+    b: { id: 'b', key: 'k2', bitis: '2026-09-30' },
+    c: { id: 'c', key: 'k3', bitis: '2026-09-25', done: true },
+    d: { id: 'd', key: 'k4', bitis: 'bozuk' }
+  });
+  assert.deepEqual(s.map(x => x.id), ['b', 'a']);
+  const kayit = key => ({ key, dosyaNo: key, birimAdi: 'X', sorguDurum: 0, taraflar: [] });
+  const sure = new Map([['k1', '2026-10-10'], ['k2', '2026-09-30']]);
+  const bul = q => search([kayit('k1'), kayit('k2'), kayit('k3')], q, { filter: { onlySure: true }, sure }).items.map(r => r.key).join(',');
+  assert.equal(bul(''), 'k2,k1');
+  assert.equal(bul('k1'), 'k1');
 });

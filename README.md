@@ -87,7 +87,23 @@ Sonuçlarda herhangi bir taraf adına tıklayın: o kişinin geçtiği **tüm do
 - **← Geri** ya da **Esc** aramaya döner; arama kutusuna yazmak da kartı kapatır.
 - UYAP taraf listesinde kimlik numarası olmadığından eşleştirme ad-soyadla yapılır; aynı ad-soyada sahip farklı kişiler birlikte listelenebilir.
 
-### 6. Diğer özellikler
+### 6. Süre hatırlatıcı (tebligat)
+
+Kartta **Süre ekle**'ye basın (yeni evraklarda ya da son evrakta bir tebligat görünüyorsa yanında da **Süre ekle** çıkar ve başlangıç olarak o evrakın tarihi önerilir):
+
+1. **Açıklama** (ör. `İstinaf`, `Cevap dilekçesi`), **tebliğ / başlangıç tarihi** ve **süre** (gün / hafta / ay) girin.
+2. **Son gün** takvimle önerilir; gerekirse elle düzeltin. Son gün hafta sonuna ya da adli tatile (20 Temmuz – 31 Ağustos) denk gelirse uyarı çıkar.
+3. **Kaydet**.
+
+Hatırlatmalar:
+- Kartta son gün ve kalan gün görünür (7 gün kala turuncu, 3 gün kala kırmızı).
+- Son günü 7 gün ya da daha az kalan süre panelin üstünde uyarı olarak çıkar; **Süreler** filtresi hepsini son günü en yakın olan önce listeler.
+- Son günü 3 gün ya da daha az kalmışsa UYAP'ı açtığınızda (sekme başına günde bir kez) bildirim gösterilir.
+- İş bitince **Tamamlandı**, gereksizse **Sil**.
+
+> **Önemli:** Eklenti yasal süreyi belirlemez. Tebliğ tarihini ve süreyi siz girersiniz; evrak tarihi tebliğ tarihi olmayabilir (e-tebligatta tebliğ, adrese ulaştığı günü izleyen 5. günün sonunda yapılmış sayılır). Son gün yalnız takvimle önerilir: resmî ve dinî bayramlar ile adli tatil uzaması uygulanmaz. Hatırlatmalar yalnız bu bilgisayarda tutulur ve Chrome kapalıyken bildirim gönderilmez.
+
+### 7. Diğer özellikler
 
 - **Kopyala:** Dosya künyesini (`Ankara 14. Asliye Hukuk Mahkemesi 2025/123 E.` biçiminde) panoya kopyalar; dilekçeye yapıştırmak için.
 - **Not ekle:** Dosyaya yalnız bu bilgisayarda görünen not yazın (Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer). Notlar aramada da bulunur.

@@ -46,6 +46,11 @@
     }
     if (Object.keys(ch).length) listeners.forEach(fn => fn(ch, 'local'));
   });
+  // Yalnız test: localStorage.openShadow = 1 iken paneli açık gölge DOM'la kur ki betikle sınanabilsin.
+  if (localStorage.getItem('openShadow')) {
+    const orig = Element.prototype.attachShadow;
+    Element.prototype.attachShadow = function (o) { return orig.call(this, { ...o, mode: 'open' }); };
+  }
   window.__uhdSend = msg => new Promise(res => { for (const fn of msgListeners) fn(msg, {}, res); });
   window.confirm = () => true;
 })();

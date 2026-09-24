@@ -32,6 +32,7 @@ NASIL ÇALIŞIR
 • Kesintisiz güncelleme: güncelleme sürerken başka sekmelerde çalışabilirsiniz; sekme kapanır ya da oturum düşerse kaldığı yerden sürer
 • Yeni evrak takibi: her güncellemede açık dosyalarınıza gelen yeni evrakları (tür, onay tarihi, gönderen) listeler
 • Müvekkillerinizi otomatik tanır, ayrı gösterir; yalnız müvekkil adlarında arama
+• Süre hatırlatıcı: tebligat için süre ve son gün girin; yaklaşan süreler panelde ve UYAP açılışında hatırlatılır
 • Müvekkil kartı: bir taraf adına tıklayın, o kişinin tüm dosyaları ve rolleri tek ekranda
 • Karşı taraf vekiliyle arama
 • Açık/Kapalı ve Ceza/Hukuk/İcra/İdari filtreleri

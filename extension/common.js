@@ -133,8 +133,9 @@
   function search(records, query, o = {}) {
     const ts = tokens(query);
     const f = o.filter || {};
-    const filtered = (f.durum && f.durum !== 'all') || (f.tur && f.tur !== 'all') || f.onlyClient || f.onlyNew;
+    const filtered = (f.durum && f.durum !== 'all') || (f.tur && f.tur !== 'all') || f.onlyClient || f.onlyNew || f.onlySure;
     const yeni = o.yeni || new Map();
+    const sure = o.sure || new Map();   // kayıt key → en yakın son gün ("yyyy-mm-dd")
     if (!ts.length && !filtered) return { total: 0, items: [], tokens: ts };
     const keys = myKeys(o.myName);
     const ctx = keys.join('|');
@@ -143,6 +144,7 @@
     for (const r of records) {
       if (!passFilter(r, f)) continue;
       if (f.onlyNew && !yeni.has(r.key)) continue;
+      if (f.onlySure && !sure.has(r.key)) continue;
       const c = info(r, keys, ctx);
       if (f.onlyClient && !c.clients.length) continue;
       const hay = f.onlyClient ? c.clientOnly : c.all;
@@ -160,7 +162,13 @@
       }
       if (ok) hits.push({ score, r });
     }
+    const bySure = (a, b) => {
+      if (!f.onlySure) return 0;
+      const x = sure.get(a.r.key) || '', y = sure.get(b.r.key) || '';
+      return x < y ? -1 : x > y ? 1 : 0;
+    };
     hits.sort((a, b) =>
+      bySure(a, b) ||
       b.score - a.score ||
       (yeni.get(b.r.key) || 0) - (yeni.get(a.r.key) || 0) ||
       (a.r.sorguDurum || 0) - (b.r.sorguDurum || 0) ||
@@ -274,6 +282,58 @@
     return out;
   }
 
+  // ------------------------------------------------ süre hatırlatıcı
+  // Eklenti yasal süreyi kendisi belirlemez: tebliğ tarihini ve süreyi avukat girer, son gün yalnız takvim
+  // hesabıyla önerilir ve avukat düzeltebilir. Tarihler yerel gün olarak "yyyy-mm-dd" biçiminde tutulur.
+  const pad2 = n => String(n).padStart(2, '0');
+  const isoOf = d => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+  function isoToUtc(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+  }
+  // "31/08/2026" (UYAP) → "2026-08-31"
+  const trToIso = s => { const t = trDateTs(s); return t ? isoOf(new Date(t)) : ''; };
+  const todayIso = (now = new Date()) => `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+
+  // Başlangıç + n gün/hafta/ay (ay eklemede ayın son gününe sıkıştırılır: 31 Ocak + 1 ay = 28/29 Şubat).
+  function addPeriod(iso, n, unit) {
+    const d = isoToUtc(iso);
+    n = Math.floor(Number(n));
+    if (!d || !(n > 0)) return '';
+    if (unit === 'ay') {
+      const y = d.getUTCFullYear(), m = d.getUTCMonth() + n, day = d.getUTCDate();
+      const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      return isoOf(new Date(Date.UTC(y, m, Math.min(day, last))));
+    }
+    return isoOf(new Date(d.getTime() + (unit === 'hafta' ? 7 * n : n) * 86400000));
+  }
+
+  // Bugünden son güne kalan gün (geçmişse eksi).
+  function daysLeft(iso, today = todayIso()) {
+    const a = isoToUtc(today), b = isoToUtc(iso);
+    return a && b ? Math.round((b - a) / 86400000) : null;
+  }
+
+  // Son gün için dikkat edilecekler. Resmî ve dinî bayramlar bilinmediği için yalnız hafta sonu ve
+  // adli tatil (20 Temmuz – 31 Ağustos) uyarılır; hiçbiri kendiliğinden uygulanmaz.
+  function sureUyarilari(iso) {
+    const d = isoToUtc(iso);
+    if (!d) return [];
+    const out = [];
+    const wd = d.getUTCDay();
+    if (wd === 0 || wd === 6) out.push('Son gün hafta sonuna denk geliyor; süre tatili izleyen iş günü bitebilir.');
+    const md = (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+    if (md >= 720 && md <= 831) out.push('Son gün adli tatile denk geliyor; işin türüne göre süre uzayabilir.');
+    return out;
+  }
+
+  // Tamamlanmamış süreler, en yakını önce. sureler: {id: {id, key, baslik, bitis, done}}
+  const activeSureler = sureler => Object.values(sureler || {})
+    .filter(s => s && !s.done && isoToUtc(s.bitis))
+    .sort((a, b) => (a.bitis < b.bitis ? -1 : a.bitis > b.bitis ? 1 : 0));
+
+  const isTebligat = tur => /tebli[gğ]/i.test(String(tur || ''));
+
   const unseenEvrak = (r, goruldu) => (r.yeniEvrak || []).filter(y => (y.at || 0) > ((goruldu && goruldu[r.key]) || 0));
 
   // UYAP'tan gelen değerler (taraf, vekil adı…) =, +, -, @ ya da sekme/satır başıyla başlıyorsa
@@ -289,5 +349,5 @@
   const fmtNum = n => Number(n || 0).toLocaleString('tr-TR');
   const fmtDate = ts => ts ? new Date(ts).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles };
+  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat };
 })();

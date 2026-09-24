@@ -863,6 +863,19 @@
   setInterval(() => maybeResume(false), 20000);
   setTimeout(() => maybeResume(true), 1500);
 
+  // Son günü 3 gün ya da daha az kalan (veya geçmiş) süreler: UYAP açılınca bu sekmede günde bir kez hatırlat.
+  chrome.storage.local.get('uhdSureler').then(({ uhdSureler }) => {
+    const { activeSureler, daysLeft, todayIso } = globalThis.UHD;
+    const yakin = activeSureler(uhdSureler).filter(s => daysLeft(s.bitis) <= 3);
+    if (!yakin.length || ssGet('legalugaSureGosterildi') === todayIso()) return;
+    ssSet('legalugaSureGosterildi', todayIso());
+    const s = yakin[0], d = daysLeft(s.bitis);
+    const kalan = d < 0 ? `${-d} gün geçti` : d === 0 ? 'bugün son gün' : d === 1 ? 'yarın son gün' : `${d} gün kaldı`;
+    toast(`${yakin.length > 1 ? `Süresi yaklaşan ${yakin.length} iş var. En yakını: ` : 'Süre yaklaşıyor: '}${s.dosyaNo} · ${s.baslik || 'Süre'} — ${kalan}.`, 'err', 0, {
+      label: 'Göster', fn: () => { panel.hidden = false; ui.showSureler(); }
+    });
+  });
+
   // Popup'tan gelen ve sayfa yenilemesi gerektiren açma isteği.
   chrome.storage.local.get('uhdPending').then(async ({ uhdPending: p }) => {
     if (!p) return;
