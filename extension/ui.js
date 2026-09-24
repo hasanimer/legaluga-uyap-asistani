@@ -832,6 +832,18 @@
       return { label, tarih: d.tarih, cls };
     }
 
+    function panelBtn(r, tab, label, title) {
+      const b = el('button', { class: 'btn sm', title }, label);
+      b.addEventListener('click', e => { e.stopPropagation(); opts.onDosyaPanel(r, tab); });
+      return b;
+    }
+
+    // Son işlem (güncellemede safahat takibi açıksa): "Son işlem: 12/09/2026 · Haciz Talebi"
+    function islemLine(r) {
+      if (!r.sonIslem || !r.sonIslem.tarih) return null;
+      return el('div', { class: 'son', title: 'Son güncellemedeki safahata göre en yeni işlem' }, el('span', { class: 'k' }, 'Son işlem: '), el('b', null, r.sonIslem.tarih), r.sonIslem.tur ? ` · ${r.sonIslem.tur}` : '');
+    }
+
     const kunyeOf = r => `${cleanBirim(r.birimAdi).replace(/\s*\(kapatılan\)$/i, '')} ${r.dosyaNo} E.`;
 
     async function copyText(btn, text) {
@@ -870,7 +882,11 @@
       const det = isOpen ? el('div', { class: 'det', onclick: e => e.stopPropagation() },
         el('div', null, el('span', { class: 'k' }, 'Durum: '), st.label, st.tarih ? ` (${st.tarih})` : ''),
         el('div', null, el('span', { class: 'k' }, 'Dosya türü: '), r.dosyaTur || '—', r.acilis ? [el('span', { class: 'k' }, ' · Açılış: '), r.acilis] : null),
-        sonLine(r) || el('div', { class: 'son' }, el('span', { class: 'k' }, 'Son evrak: '), evrakTracked ? 'yok' : 'evrak takibi kapalı')) : null;
+        sonLine(r) || el('div', { class: 'son' }, el('span', { class: 'k' }, 'Son evrak: '), evrakTracked ? 'yok' : 'evrak takibi kapalı'),
+        opts.onDosyaPanel ? el('div', { class: 'row' },
+          r.yargiTuru === '2' ? panelBtn(r, 'ozet', 'İcra özeti', 'Alacak, tahsilat ve kalan tutar (ücretsiz)') : null,
+          r.yargiTuru === '2' ? panelBtn(r, 'sorgu', 'Borçlu sorgusu', 'SGK, banka, tapu, araç… (ücretli olabilir; onayla ve tek tek)') : null,
+          panelBtn(r, 'safahat', 'Safahat', 'Dosyanın işlem geçmişi')) : null) : null;
       const row = el('div', { class: 'item' + (st.cls ? ' ' + st.cls : '') + (i === sel ? ' sel' : '') },
         el('div', { class: 'ihead' },
           el('div', { class: 'ititle' },
@@ -880,6 +896,7 @@
           icons),
         el('div', { class: 'hr' }),
         durLine(r),
+        islemLine(r),
         extra || null,
         partyLines(r, toks, keys),
         evrakBlock(r, toks),
@@ -1269,6 +1286,7 @@
         el('h3', null, 'Güncelleme'),
         el('div', { class: 'box' },
           check('evrakTakip', evrakTakipAcik(prefs, records), 'Yeni evrakları bul', 'Her açık dosya için UYAP’a bir istek daha gider; dosya sayısına göre güncelleme belirgin uzar.'),
+          check('safahatTakip', false, 'Son işlemi (safahat) kartta göster', 'Güncellemede her açık dosyanın safahatı da alınır ve yalnız en yeni işlemin tarihi ve türü saklanır; güncelleme uzar.'),
           select('otoGuncelle', 'kapali', 'Otomatik güncelleme', [['kapali', 'Kapalı'], ['6s', '6 saatte bir'], ['gunluk', 'Günde bir']]),
           el('div', { class: 'hint' }, 'Otomatik güncelleme yalnız UYAP sekmesi açıkken, son güncellemenin üzerinden bu süre geçtiyse başlar.'),
           el('div', { class: 'row' }, btnFull, el('span', { class: 'hint' }, '“Güncelle” yalnız yeni dosyaların taraflarını alır; “Baştan tara” hepsini yeniden alır.'))),

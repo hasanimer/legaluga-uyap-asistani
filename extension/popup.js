@@ -63,6 +63,22 @@ async function openEvrak(rec, key) {
   }
 }
 
+// Dosya paneli (safahat, icra özeti, borçlu sorgusu) UYAP sekmesinde açılır.
+async function dosyaPanel(rec, tab) {
+  const t = await uyapTab();
+  if (!t) return noTab();
+  await focusTab(t);
+  try {
+    await chrome.tabs.sendMessage(t.id, { type: 'uhd-dosya-panel', record: rec, tab });
+    window.close();
+  } catch {
+    ui.setNotice('UYAP sekmesi eklentiye yanıt vermedi. Sekmeyi yenileyip tekrar deneyin.', 'err', {
+      label: 'Sekmeyi yenile',
+      fn: () => chrome.tabs.reload(t.id)
+    });
+  }
+}
+
 async function update(full) {
   const tab = await uyapTab();
   if (!tab) return noTab();
@@ -87,6 +103,7 @@ const ui = mountUI(document.getElementById('app'), {
   mode: 'popup',
   onOpen: openRecord,
   onOpenEvrak: openEvrak,
+  onDosyaPanel: dosyaPanel,
   onUpdate: update,
   onStop: stop
 });

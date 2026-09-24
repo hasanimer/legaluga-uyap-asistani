@@ -9,7 +9,7 @@
   if (window.__uhdLoaded) return;
   window.__uhdLoaded = true;
 
-  const { TURLER, norm, openPath, parseEvraklar, diffEvrak, sonEvrak, evrakKey, parseDurusma, uyapDate, evrakTakipAcik } = globalThis.UHD;
+  const { TURLER, norm, openPath, parseEvraklar, diffEvrak, sonEvrak, evrakKey, parseDurusma, uyapDate, evrakTakipAcik, parseSafahat, sonIslemOf, fmtTL, humanKey, borcluAdi, BORCLU_SORGULARI, SORGU_ORTAK } = globalThis.UHD;
   const OWNER = Math.random().toString(36).slice(2);
   const DELAY = 150;
   const TARAF_V = 2; // 2: taraflarla birlikte vekiller de saklanır
@@ -307,6 +307,7 @@
     try {
       const { uhdIndex, uhdPrefs } = await chrome.storage.local.get(['uhdIndex', 'uhdPrefs']);
       const evrakTakip = evrakTakipAcik(uhdPrefs, uhdIndex && uhdIndex.records);
+      const safahatTakip = !!(uhdPrefs && uhdPrefs.safahatTakip);
       const old = new Map(((uhdIndex && uhdIndex.records) || []).map(r => [r.key, r]));
 
       if (j.listDone) {
@@ -368,7 +369,7 @@
             listJob: j.id,
             taraflar: o ? o.taraflar : null, tarafAt: o ? o.tarafAt : 0, tarafV: o ? o.tarafV : 0,
             evrakSeen: o ? o.evrakSeen : undefined, evrakAt: o ? o.evrakAt : 0, yeniEvrak: o ? o.yeniEvrak : undefined,
-            sonEvrak: o ? o.sonEvrak : undefined
+            sonEvrak: o ? o.sonEvrak : undefined, sonIslem: o ? o.sonIslem : undefined, islemAt: o ? o.islemAt : 0
           });
         }
         for (const [k, o] of old) {
@@ -451,6 +452,28 @@
         await saveIndex(merged);
       }
 
+      // 5) Son işlem (isteğe bağlı): açık dosyaların safahatından yalnız en yeni işlemin tarihi ve türü saklanır.
+      if (safahatTakip) {
+        const sneed = [...merged.values()].filter(r => r.sorguDurum !== 1 && r.listJob === j.id && (r.islemAt || 0) < startedAt);
+        const sPhaseStart = Date.now();
+        let sDone = 0, sStreak = 0;
+        await pool(sneed, ESZAMANLI, async r => {
+          try {
+            r.sonIslem = sonIslemOf(parseSafahat(await api('dosya_safahat_bilgileri_brd.ajx', { dosyaId: r.dosyaId })));
+            r.islemAt = Date.now();
+            sStreak = 0;
+          } catch (e) {
+            if (e instanceof Fatal || e instanceof Stopped) throw e;
+            st.islemErrors = (st.islemErrors || 0) + 1;
+            if (++sStreak >= 8) throw new Fatal('Safahat bilgileri art arda alınamadı. UYAP oturumunu kontrol edip tekrar deneyin.');
+          }
+          sDone++;
+          await checkpoint(merged, j);
+          await setProgress({ running: true, phase: 'islem', done: sDone, total: sneed.length, phaseStart: sPhaseStart, text: `Son işlemler alınıyor: ${sDone}/${sneed.length}` });
+        });
+        await saveIndex(merged);
+      }
+
       // Bu işte bulunan yeni evraklar (iş yarıda kalıp sürdürüldüyse önceki bölümlerdekiler de).
       let yeniEvrak = 0, yeniDosya = 0;
       for (const r of merged.values()) {
@@ -461,6 +484,7 @@
       if (yeniEvrak) summary += `; ${yeniDosya} dosyada ${yeniEvrak} yeni evrak`;
       if (st.errors) summary += `, ${st.errors} dosyanın tarafları alınamadı`;
       if (st.evrakErrors) summary += `, ${st.evrakErrors} dosyanın evrakları alınamadı`;
+      if (st.islemErrors) summary += `, ${st.islemErrors} dosyanın son işlemi alınamadı`;
       if (st.evrakBad) summary += `, ${st.evrakBad} evrakta kimlik/tarih eksik olduğu için karşılaştırılamadı`;
       if (st.failed) summary += `, ${st.failed} sorgu grubu hata verdi (eski kayıtlar korundu)`;
       if (st.durusma) summary += `; ${DURUSMA_GUN} gün içinde ${st.durusma} duruşma`;
@@ -832,6 +856,33 @@
 .viewer .bar a,.viewer .bar button{color:#fff;border:1px solid rgba(255,255,255,.6);background:none;border-radius:6px;padding:4px 10px;font:inherit;cursor:pointer;text-decoration:none}
 .viewer iframe{flex:1;border:0;width:100%}
 .viewer .msg{padding:28px;color:#344054}
+.viewer .dp-tabs{display:flex;gap:4px;padding:8px 12px 0;border-bottom:1px solid #e3e8f2;background:#f5f7fb}
+.viewer .dp-tab{border:1px solid transparent;border-bottom:0;background:none;border-radius:8px 8px 0 0;padding:6px 12px;font:inherit;cursor:pointer;color:#344054}
+.viewer .dp-tab.on{background:#fff;border-color:#e3e8f2;color:${BRAND.primary};font-weight:600;margin-bottom:-1px}
+.viewer .dp-body{flex:1;overflow:auto;padding:12px 14px;background:#fff}
+.viewer .dp-muted{color:#667085;font-size:12px;margin:6px 0}
+.viewer .dp-err{color:#b42318;margin:6px 0}
+.viewer .dp-warn{padding:8px 10px;border-radius:8px;background:#fff4e5;color:#7a4b00;font-size:12px;margin-bottom:8px}
+.viewer .dp-bakiye{font-size:12px;color:#344054;margin-bottom:8px}
+.viewer .dp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.viewer .dp-card{border:1px solid #e3e8f2;border-radius:10px;padding:10px 12px}
+.viewer .dp-card h4,.viewer .dp-res h4{margin:0 0 6px;font-size:13px}
+.viewer .dp-card div{margin:2px 0}
+.viewer .dp-k{color:#667085}
+.viewer .dp-strong{font-weight:700}
+.viewer .dp-check{display:flex;gap:6px;align-items:center;margin:3px 0;cursor:pointer}
+.viewer .dp-actions{margin:10px 0}
+.viewer .dp-go{border:0;background:${BRAND.primary};color:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.viewer .dp-go:disabled{opacity:.5;cursor:default}
+.viewer .dp-res{border-top:1px solid #e3e8f2;padding:8px 0}
+.viewer .dp-tablewrap{overflow:auto;max-width:100%}
+.viewer .dp-table{border-collapse:collapse;font-size:12px;width:100%}
+.viewer .dp-table th,.viewer .dp-table td{border:1px solid #e3e8f2;padding:4px 6px;text-align:left;vertical-align:top}
+.viewer .dp-table th{background:#f5f7fb;font-weight:600}
+.viewer .dp-table td.nw{white-space:nowrap}
+.viewer .dp-kv div{margin:2px 0}
+.viewer .dp-sub{margin:6px 0;padding-left:8px;border-left:2px solid #e3e8f2}
+.viewer .dp-more{margin-top:10px;font-size:12px}
 [hidden]{display:none!important}
 `;
   let panel, ui, toastEl, toastTimer, shadowRoot;
@@ -851,6 +902,7 @@
       mode: 'page',
       onOpen: r => openFile(r),
       onOpenEvrak: (r, k) => openEvrak(r, k),
+      onDosyaPanel: (r, tab) => openDosyaPanel(r, tab),
       onUpdate: async full => {
         const res = await startUpdate(full);
         if (!res.ok) ui.setNotice(res.error, 'err');
@@ -954,6 +1006,187 @@
     }
   }
 
+  // ---------------------------------------------------------------- Dosya paneli: safahat, icra özeti, borçlu sorgusu
+  // Hepsi yalnız kullanıcı panelde istediğinde, o dosya için sorgulanır; sonuçlar ekranda gösterilir, saklanmaz.
+  // Borçlu sorguları UYAP'ta sorgu bakiyesinden düşebildiği için yalnız seçilenler, açık onayla ve tek tek yapılır.
+
+  // Kayıttaki dosya kimliği bu oturumda geçersizse (ör. yeniden giriş) dosya yeniden sorgulanıp taze kimlikle denenir.
+  async function withDosya(rec, fn) {
+    try { return await fn(rec.dosyaId); }
+    catch (e) {
+      if (e instanceof Fatal) throw e;
+      const id = await freshDosyaId(rec);
+      if (!id) throw new Error('Dosya UYAP’ta bulunamadı; Güncelle’ye basıp tekrar deneyin.');
+      rec.dosyaId = id;
+      return fn(id);
+    }
+  }
+
+  // Bilinmeyen yapıdaki yanıtı okunur göstermek için: nesne listesi → tablo, nesne → alan listesi.
+  function renderValue(v, depth = 0) {
+    const fmt = x => (x == null || x === '' ? '—' : typeof x === 'boolean' ? (x ? 'Evet' : 'Hayır') : typeof x === 'object' ? JSON.stringify(x).slice(0, 120) : String(x));
+    if (Array.isArray(v)) {
+      if (!v.length) return el('div', { class: 'dp-muted' }, 'Kayıt yok.');
+      if (v.every(x => x && typeof x === 'object' && !Array.isArray(x))) {
+        const cols = [...new Set(v.slice(0, 20).flatMap(x => Object.keys(x)))]
+          .filter(k => !/(^id$|Id$|DVO$)/.test(k) || v.every(x => typeof x[k] !== 'object')).slice(0, 10);
+        return el('div', { class: 'dp-tablewrap' }, el('table', { class: 'dp-table' },
+          el('thead', null, el('tr', null, cols.map(c => el('th', null, humanKey(c))))),
+          el('tbody', null, v.slice(0, 500).map(x => el('tr', null, cols.map(c => el('td', null, fmt(x[c]))))))));
+      }
+      return el('div', null, v.map(x => el('div', null, fmt(x))));
+    }
+    if (v && typeof v === 'object') {
+      const rows = Object.entries(v).filter(([k]) => !SORGU_ORTAK.has(k));
+      if (!rows.length) return el('div', { class: 'dp-muted' }, 'Sonuç yok.');
+      return el('div', { class: 'dp-kv' }, rows.map(([k, x]) => (x && typeof x === 'object' && depth < 2)
+        ? el('div', { class: 'dp-sub' }, el('div', { class: 'dp-k' }, humanKey(k)), renderValue(x, depth + 1))
+        : el('div', null, el('span', { class: 'dp-k' }, humanKey(k) + ': '), fmt(x))));
+    }
+    return el('div', null, fmt(v));
+  }
+
+  let dosyaPanel = null;
+  function openDosyaPanel(rec, tab) {
+    if (dosyaPanel) dosyaPanel.close();
+    hidePanel();
+    const icra = rec.yargiTuru === '2';
+    const tabs = [icra && ['ozet', 'Özet'], icra && ['sorgu', 'Borçlu sorgusu'], ['safahat', 'Safahat']].filter(Boolean);
+    let active = tabs.some(t => t[0] === tab) ? tab : tabs[0][0];
+    const body = el('div', { class: 'dp-body' });
+    const tabBar = el('div', { class: 'dp-tabs' });
+    const close = el('button', { title: 'Kapat (Esc)' }, 'Kapat');
+    const box = el('div', { class: 'box', role: 'dialog', 'aria-label': 'Dosya paneli' },
+      el('div', { class: 'bar' }, el('b', null, `${rec.dosyaNo} · ${rec.birimAdi}`), close), tabBar, body);
+    const viewer = el('div', { class: 'viewer' }, box);
+    const onKey = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); done(); } };
+    const done = () => { viewer.remove(); document.removeEventListener('keydown', onKey, true); dosyaPanel = null; };
+    close.addEventListener('click', done);
+    viewer.addEventListener('click', ev => { if (ev.target === viewer) done(); });
+    document.addEventListener('keydown', onKey, true);
+    const show = t => {
+      active = t;
+      tabBar.replaceChildren(...tabs.map(([k, label]) => {
+        const b = el('button', { class: 'dp-tab' + (k === active ? ' on' : '') }, label);
+        b.addEventListener('click', () => show(k));
+        return b;
+      }));
+      // Her sekme kendi alanına yazar: sekme değişince geç gelen yanıt yeni sekmenin üzerine yazmaz.
+      const pane = el('div', null, el('div', { class: 'dp-muted' }, 'UYAP’tan alınıyor…'));
+      body.replaceChildren(pane);
+      const run = { ozet: () => loadOzet(rec, pane), sorgu: () => loadSorgu(rec, pane), safahat: () => loadSafahat(rec, pane) }[t];
+      run().catch(err => pane.replaceChildren(el('div', { class: 'dp-err' }, `Alınamadı: ${err.message}`)));
+    };
+    dosyaPanel = { close: done };
+    shadowRoot.append(viewer);
+    show(active);
+  }
+
+  async function loadSafahat(rec, body) {
+    const items = await withDosya(rec, id => api('dosya_safahat_bilgileri_brd.ajx', { dosyaId: id }).then(parseSafahat));
+    body.replaceChildren(
+      el('div', { class: 'dp-muted' }, `${items.length} işlem, en yeni önce. UYAP’tan şimdi alındı; saklanmaz.`),
+      el('div', { class: 'dp-tablewrap' }, el('table', { class: 'dp-table' },
+        el('thead', null, el('tr', null, ['Tarih', 'İşlem', 'Açıklama', 'Birim'].map(h => el('th', null, h)))),
+        el('tbody', null, items.map(x => el('tr', null, el('td', { class: 'nw' }, x.tarih), el('td', null, x.tur), el('td', null, x.aciklama), el('td', null, x.birim)))))));
+  }
+
+  async function loadOzet(rec, body) {
+    const [ayrinti, tahsilat, kesin] = await withDosya(rec, id => Promise.all([
+      api('dosyaAyrintiBilgileri_brd.ajx', { dosyaId: id }),
+      api('dosya_tahsilat_reddiyat_bilgileri_brd.ajx', { dosyaId: id, dosyaTurKod: Number(rec.dosyaTurKod) }).catch(() => null),
+      api('getTakibiKesinlesenBorcluListesi_brd.ajx', { dosyaId: id }).catch(() => null)
+    ]));
+    if (!ayrinti || typeof ayrinti !== 'object') throw new Error('Dosya ayrıntısı okunamadı.');
+    const money = (k, label) => (typeof ayrinti[k] === 'number' ? el('div', null, el('span', { class: 'dp-k' }, label + ': '), fmtTL(ayrinti[k])) : null);
+    const text = (k, label) => (ayrinti[k] ? el('div', null, el('span', { class: 'dp-k' }, label + ': '), String(ayrinti[k])) : null);
+    const known = new Set(['takibinTuruAciklama', 'takibinSekliAciklama', 'takibinYoluAciklama', 'alacakKalemToplamTutar', 'alacakKalemFaizTutar',
+      'takipSonrasiMasraf', 'vekaletUcreti', 'tahsilHarci', 'yapilmisBorcTahsilati', 'takibinTuru', 'takibinSekli', 'takibinYolu']);
+    const others = Object.entries(ayrinti).filter(([k, v]) => !known.has(k) && (typeof v === 'number' || (typeof v === 'string' && v.length < 80)));
+    const t = tahsilat && typeof tahsilat === 'object' ? tahsilat : null;
+    const kesinN = Array.isArray(kesin) ? kesin.length : null;
+    body.replaceChildren(
+      el('div', { class: 'dp-grid' },
+        el('div', { class: 'dp-card' }, el('h4', null, 'Takip'),
+          text('takibinTuruAciklama', 'Türü'), text('takibinSekliAciklama', 'Şekli'), text('takibinYoluAciklama', 'Yolu'),
+          kesinN != null ? el('div', null, el('span', { class: 'dp-k' }, 'Takibi kesinleşen borçlu: '), String(kesinN)) : null),
+        el('div', { class: 'dp-card' }, el('h4', null, 'Alacak'),
+          money('alacakKalemToplamTutar', 'Alacak kalemleri toplamı'), money('alacakKalemFaizTutar', 'Faiz'),
+          money('takipSonrasiMasraf', 'Takip sonrası masraf'), money('vekaletUcreti', 'Vekâlet ücreti'), money('tahsilHarci', 'Tahsil harcı')),
+        t ? el('div', { class: 'dp-card' }, el('h4', null, 'Tahsilat'),
+          el('div', null, el('span', { class: 'dp-k' }, 'Toplam tahsilat: '), fmtTL(t.toplamTahsilat)),
+          el('div', null, el('span', { class: 'dp-k' }, 'Toplam reddiyat: '), fmtTL(t.toplamreddiyat)),
+          typeof t.haricen === 'number' ? el('div', null, el('span', { class: 'dp-k' }, 'Haricen: '), fmtTL(t.haricen)) : null,
+          el('div', { class: 'dp-strong' }, el('span', { class: 'dp-k' }, 'Kalan: '), fmtTL(t.toplamKalan))) : money('yapilmisBorcTahsilati', 'Yapılmış tahsilat')),
+      others.length ? el('details', { class: 'dp-more' }, el('summary', null, 'Diğer bilgiler'),
+        el('div', { class: 'dp-kv' }, others.map(([k, v]) => el('div', null, el('span', { class: 'dp-k' }, humanKey(k) + ': '), typeof v === 'number' ? v.toLocaleString('tr-TR') : v)))) : null,
+      el('div', { class: 'dp-muted' }, 'Tutarlar UYAP’ın dosya ayrıntısından şimdi alındı; saklanmaz. Resmî hesap için UYAP’taki dosya hesabını esas alın.'));
+  }
+
+  async function loadSorgu(rec, body) {
+    const [borclular, bakiye] = await withDosya(rec, id => Promise.all([
+      api('dosya_borclu_list.ajx', { dosyaId: id }),
+      api('ws_sorgu_bakiyesi.ajx', { params: { dosyaId: id } }).catch(() => null)
+    ]));
+    if (!Array.isArray(borclular) || !borclular.length) {
+      body.replaceChildren(el('div', { class: 'dp-muted' }, 'Bu dosyada borçlu kaydı bulunamadı.'));
+      return;
+    }
+    const bakiyeEl = el('div', { class: 'dp-bakiye' });
+    const showBakiye = b => bakiyeEl.replaceChildren(b && typeof b === 'object'
+      ? `Sorgu bakiyesi: ${fmtTL(b.sorguBakiye)}` + (b.ucretsizSorguLimit != null ? ` · Ücretsiz sorgu limiti: ${b.ucretsizSorguLimit}` : '') +
+        (b.sorguKalanIslemSayisi != null ? ` · Kalan işlem: ${b.sorguKalanIslemSayisi}` : '') + (b.hasBarokart === false ? ' · Barokart tanımlı değil' : '')
+      : 'Sorgu bakiyesi alınamadı.');
+    showBakiye(bakiye);
+    const bSel = borclular.map((b, i) => {
+      const box = el('input', { type: 'checkbox' });
+      box.checked = borclular.length === 1;
+      return { b, box, label: borcluAdi(b) || `Borçlu ${i + 1}` };
+    });
+    const qSel = BORCLU_SORGULARI.map(q => ({ q, box: el('input', { type: 'checkbox' }) }));
+    const go = el('button', { class: 'dp-go' }, 'Seçilenleri sorgula');
+    const out = el('div', { class: 'dp-results' });
+    const count = () => bSel.filter(x => x.box.checked).length * qSel.filter(x => x.box.checked).length;
+    const upd = () => { const n = count(); go.disabled = !n; go.textContent = n ? `Seçilenleri sorgula (${n} sorgu)` : 'Borçlu ve sorgu seçin'; };
+    [...bSel, ...qSel].forEach(x => x.box.addEventListener('change', upd));
+    upd();
+    go.addEventListener('click', async () => {
+      const bs = bSel.filter(x => x.box.checked), qs = qSel.filter(x => x.box.checked);
+      const n = bs.length * qs.length;
+      if (!n) return;
+      if (!confirm(`${n} borçlu sorgusu yapılacak (${qs.map(x => x.q.ad).join(', ')}).\n\nBu sorgular UYAP’ta ücretli olabilir ve sorgu bakiyenizden ya da ücretsiz sorgu hakkınızdan düşer. Sonuçlar yalnız ekranda gösterilir, saklanmaz.\n\nDevam edilsin mi?`)) return;
+      go.disabled = true;
+      out.replaceChildren();
+      let i = 0;
+      for (const { b, label } of bs) {
+        for (const { q } of qs) {
+          i++;
+          go.textContent = `Sorgulanıyor… ${i}/${n}`;
+          const sec = el('div', { class: 'dp-res' }, el('h4', null, `${label} · ${q.ad}`), el('div', { class: 'dp-muted' }, 'Sorgulanıyor…'));
+          out.append(sec);
+          try {
+            const res = await api(`borclu_bilgileri_goruntule_${q.id}.ajx`, { dosyaId: rec.dosyaId, kisiKurumId: b.kisiKurumId, ...(q.extra || {}) });
+            sec.replaceChild(renderValue(res), sec.lastChild);
+          } catch (err) {
+            sec.replaceChild(el('div', { class: 'dp-err' }, `Sorgulanamadı: ${err.message}`), sec.lastChild);
+            if (err instanceof Fatal) { i = n; break; }
+          }
+          await sleep(2000);   // UYAP'ı yormamak için sorgular arası bekleme
+        }
+      }
+      showBakiye(await api('ws_sorgu_bakiyesi.ajx', { params: { dosyaId: rec.dosyaId } }).catch(() => null));
+      upd();
+    });
+    body.replaceChildren(
+      el('div', { class: 'dp-warn' }, 'Borçlu sorguları UYAP’ta ücretli olabilir; sorgu bakiyenizden ya da ücretsiz sorgu hakkınızdan düşer. Yalnız seçtikleriniz, onayınızdan sonra tek tek sorgulanır. Sonuçlar saklanmaz; pencere kapanınca silinir.'),
+      bakiyeEl,
+      el('div', { class: 'dp-grid' },
+        el('div', { class: 'dp-card' }, el('h4', null, 'Borçlular'), bSel.map(x => el('label', { class: 'dp-check' }, x.box, x.label))),
+        el('div', { class: 'dp-card' }, el('h4', null, 'Sorgular'), qSel.map(x => el('label', { class: 'dp-check' }, x.box, x.q.ad)))),
+      el('div', { class: 'dp-actions' }, go),
+      out);
+  }
+
   function showViewer(rec, e, doc) {
     const url = URL.createObjectURL(doc.blob);
     const pdf = doc.type.includes('pdf');
@@ -1040,6 +1273,7 @@
     if (msg.type === 'uhd-ping') send({ ok: true });
     else if (msg.type === 'uhd-open') { openFile(msg.record); send({ ok: true }); }
     else if (msg.type === 'uhd-open-evrak') { openEvrak(msg.record, msg.key); send({ ok: true }); }
+    else if (msg.type === 'uhd-dosya-panel') { openDosyaPanel(msg.record, msg.tab); send({ ok: true }); }
     else if (msg.type === 'uhd-stop') { stopUpdate().then(() => send({ ok: true })); return true; }
     else if (msg.type === 'uhd-update') { startUpdate(msg.full).then(send); return true; }
   });

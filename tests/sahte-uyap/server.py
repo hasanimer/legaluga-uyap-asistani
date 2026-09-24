@@ -90,6 +90,36 @@ ORNEK_PDF = (b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Ty
              b"4 0 obj<</Length 44>>stream\nBT /F1 18 Tf 20 60 Td (Ornek evrak) Tj ET\nendstream endobj "
              b"5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n")
 
+# İcra ve safahat (uydurma). Borçlu sorguları sorgu bakiyesinden düşer (gerçekte ücretli olabilir).
+BAKIYE = {"sorguBakiye": 250.0, "kalan": 10}
+
+def safahat(dosya_id):
+    d = BY_ID[dosya_id]
+    h = sum(map(ord, dosya_id))
+    out = []
+    for j in range(1, 6):
+        g = datetime.date(2026, 1, 1) + datetime.timedelta(days=17 * j + h % 7)
+        out.append({"islemYapanBirim": d['birimAdi'], "safahatTarihiSTR": g.strftime('%d/%m/%Y') + " 10:%02d" % j,
+                    "safahatTuruAciklama": ['Tensip Zaptı', 'Ara Karar', 'Tebligat Çıkarıldı', 'Haciz Talebi', 'Duruşma'][j % 5],
+                    "aciklama": f"Örnek işlem {j}", "personel": "ÖRNEK PERSONEL", "safahatStatuKodAciklama": "Onaylandı"})
+    return {"safahatlar": out, "showPersonel": False, "sonuc": True, "id": "x", "isCompressed": False, "htmlHataKodList": [], "isMock": False}
+
+def borclular(dosya_id):
+    return [{"kisiTumDVO": {"adi": "ÖRNEK", "soyadi": "BORÇLU", "tcKimlikNo": "00000000000"}, "kisiKurumId": 111, "turu": 0},
+            {"kisiTumDVO": {"kurumAdi": "ÖRNEK TİCARET A.Ş."}, "kisiKurumId": 222, "turu": 1}]
+
+def borclu_sorgu(tur, body):
+    BAKIYE["sorguBakiye"] = round(BAKIYE["sorguBakiye"] - 2.5, 2)
+    BAKIYE["kalan"] = max(0, BAKIYE["kalan"] - 1)
+    ortak = {"borcluBilgileri": {"kisiTumDVO": {}, "kisiKurumId": body.get('kisiKurumId'), "turu": 0}, "sorgulayanBilgileri": "Av. TEST AVUKAT", "portalTuru": 2, "dosyaOzetDVO": {}}
+    if tur.startswith('sgk'):
+        ortak["sgkBilgileri"] = [{"isyeriUnvani": "ÖRNEK İŞYERİ", "iseGirisTarihi": "01/02/2024", "durum": "Aktif"}]
+    elif tur == 'banka':
+        ortak["bankaBilgileri"] = [{"bankaAdi": "ÖRNEK BANKASI", "hesapVarMi": True}, {"bankaAdi": "DENEME BANKASI", "hesapVarMi": False}]
+    else:
+        ortak["sonucMesaji"] = "Kayıt bulunamadı."
+    return ortak
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         sys.stderr.write("%s\n" % (fmt % a))
@@ -134,6 +164,24 @@ class H(BaseHTTPRequestHandler):
             out = taraflar(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
         elif p == 'avukat_durusma_sorgula_brd.ajx':
             out = durusmalar(body)
+        elif p == 'dosya_safahat_bilgileri_brd.ajx':
+            out = safahat(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
+        elif p == 'dosyaAyrintiBilgileri_brd.ajx':
+            out = {"takibinTuruAciklama": "İlamsız Takip", "takibinSekliAciklama": "Genel Haciz Yoluyla", "alacakKalemToplamTutar": 15000.0,
+                   "alacakKalemFaizTutar": 1234.56, "takipSonrasiMasraf": 300.0, "vekaletUcreti": 2500.0, "tahsilHarci": 700.0,
+                   "yapilmisBorcTahsilati": 5000.0} if body.get('dosyaId') in BY_ID else {"error": "yok"}
+        elif p == 'dosya_tahsilat_reddiyat_bilgileri_brd.ajx':
+            out = {"tahsilatList": [], "reddiyatList": [], "harcList": [], "toplamTahsilat": 5000.0, "toplamreddiyat": 4500.0, "haricen": 0.0,
+                   "toplamTeminat": 0.0, "toplamTahsilHarci": 227.5, "toplamKalan": 14234.56, "isIcraMi": True}
+        elif p == 'getTakibiKesinlesenBorcluListesi_brd.ajx':
+            out = [{"kisiMiKurumMu": 0}]
+        elif p == 'dosya_borclu_list.ajx':
+            out = borclular(body.get('dosyaId'))
+        elif p == 'ws_sorgu_bakiyesi.ajx':
+            out = {"sorguBakiye": BAKIYE["sorguBakiye"], "hasBarokart": True, "sorguToplamIslemSayisi": 10, "sorguKalanIslemSayisi": BAKIYE["kalan"],
+                   "ucretsizSorguLimit": 10, "sorguBakiyeAltLimit": 0}
+        elif p.startswith('borclu_bilgileri_goruntule_'):
+            out = borclu_sorgu(p[len('borclu_bilgileri_goruntule_'):-4], body)
         elif p == 'list_dosya_evraklar.ajx':
             out = evraklar(body['dosyaId']) if body.get('dosyaId') in BY_ID else {"error": "yok"}
         else:

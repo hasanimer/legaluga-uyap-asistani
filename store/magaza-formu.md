@@ -36,6 +36,7 @@ NASIL ÇALIŞIR
 • Evrakı açma: yeni ya da son evrakı tek tıkla UYAP'tan getirip görüntüleme
 • Kesintisiz güncelleme; durdurup kaldığı yerden sürdürme; isteğe bağlı otomatik güncelleme
 • Açık ve koyu tema, dosyayı aramalardan gizleme, yedekle / yedekten yükle
+• Dosya paneli: safahat, icra özeti (alacak, tahsilat, kalan) ve onaylı, tek tek borçlu sorgusu (SGK, banka, TAKBİS, EGM…); sonuçlar saklanmaz
 • Süre hatırlatıcı: tebligat için süre ve son gün girin; yaklaşan süreler panelde ve UYAP açılışında hatırlatılır
 • Müvekkil kartı: bir taraf adına tıklayın, o kişinin tüm dosyaları ve rolleri tek ekranda
 • Karşı taraf vekiliyle arama
@@ -91,7 +92,7 @@ Avukatın UYAP Avukat Portalı'ndaki kendi dosyalarını ad, soyad, dosya numara
 
 **Veri kullanımı — işaretlenecek veri türleri:**
 - ☑ **Kişisel tanımlayıcı bilgiler** (Personally identifiable information): Dosya taraflarının ve vekillerinin adları. Yalnızca cihazda saklanır, iletilmez.
-- ☑ **Web sitesi içeriği** (Website content): UYAP'tan alınan dosya numarası, mahkeme adı, dosya türü ve durum bilgileri; açık dosyaların evrak listesi (evrak türü, onay ve gönderim tarihi, gönderen, açıklama, birim evrak no); duruşma listesi (tarih, saat, mahkeme, işlem, taraf adları). Kullanıcı "Aç"a bastığında evrak içeriği UYAP'tan alınıp yalnız ekranda gösterilir, saklanmaz. Hepsi yalnızca cihazda kalır, iletilmez.
+- ☑ **Web sitesi içeriği** (Website content): UYAP'tan alınan dosya numarası, mahkeme adı, dosya türü ve durum bilgileri; açık dosyaların evrak listesi (evrak türü, onay ve gönderim tarihi, gönderen, açıklama, birim evrak no); duruşma listesi (tarih, saat, mahkeme, işlem, taraf adları). Kullanıcı "Aç"a bastığında evrak içeriği, dosya panelinde istediğinde safahat, icra özeti ve onayladığı borçlu sorgusu sonuçları UYAP'tan alınıp yalnız ekranda gösterilir, saklanmaz. İsteğe bağlı son işlem takibinde yalnız en yeni safahat işleminin tarihi ve türü saklanır. Hepsi yalnızca cihazda kalır, iletilmez.
 - Diğerleri (sağlık, finans, kimlik doğrulama, kişisel iletişim, konum, web geçmişi, kullanıcı etkinliği) işaretlenmez.
 
 > Not: Veriler cihazdan çıkmasa da eklenti bu verileri işlediği için beyan ediyoruz. Eksik beyan, fazla beyandan daha büyük bir ret sebebidir.

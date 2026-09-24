@@ -126,11 +126,21 @@ Hatırlatmalar:
 
 > **Önemli:** Eklenti yasal süreyi belirlemez. Tebliğ tarihini ve süreyi siz girersiniz; evrak tarihi tebliğ tarihi olmayabilir (e-tebligatta tebliğ, adrese ulaştığı günü izleyen 5. günün sonunda yapılmış sayılır). Son gün yalnız takvimle önerilir: resmî ve dinî bayramlar ile adli tatil uzaması uygulanmaz. Hatırlatmalar yalnız bu bilgisayarda tutulur ve Chrome kapalıyken bildirim gönderilmez.
 
-### 9. Kart düzeni
+### 9. Dosya paneli: safahat, icra özeti, borçlu sorgusu
+
+Kartta **Detay**'ı açıp **Safahat** (her dosyada), **İcra özeti** ve **Borçlu sorgusu** (icra dosyalarında) düğmelerine basın. Panel UYAP sayfasının üstünde açılır; hepsi yalnız o anda, yalnız o dosya için UYAP'tan alınır ve **saklanmaz** (pencere kapanınca silinir).
+
+- **Safahat:** Dosyanın işlem geçmişi, en yeni önce.
+- **İcra özeti (ücretsiz):** Takibin türü ve şekli, alacak kalemleri toplamı, faiz, masraf, vekâlet ücreti, tahsil harcı; toplam tahsilat, reddiyat ve **kalan**; takibi kesinleşen borçlu sayısı. Resmî hesap için UYAP'taki dosya hesabını esas alın.
+- **Borçlu sorgusu (ücretli olabilir):** Önce sorgu bakiyeniz, ücretsiz sorgu limitiniz ve kalan işlem sayınız görünür. Borçlu(lar)ı ve sorguları (SGK türleri, banka, TAKBİS, EGM araç, GSM, firma, borçlunun diğer icra dosyaları) seçip **Seçilenleri sorgula**'ya basın; kaç sorgu yapılacağı ve bakiyeden düşebileceği yazan onaydan sonra sorgular 2 saniye arayla tek tek yapılır, bitince bakiye yenilenir. Hiçbir sorgu kendiliğinden ya da birden çok dosyada toplu yapılmaz. Sonuçlar üçüncü kişilere ait hassas veridir; yalnız ekranda gösterilir.
+
+**Son işlem:** **Ayarlar → Güncelleme → Son işlemi (safahat) kartta göster** açılırsa güncellemede her açık dosyanın safahatı alınır ve kartta `Son işlem: 12/09/2026 · Haciz Talebi` görünür (yalnız en yeni işlemin tarihi ve türü saklanır; varsayılanı kapalı, güncellemeyi uzatır).
+
+### 10. Kart düzeni
 
 Her dosya bir kart: üstte **mahkeme · esas no**, altında taraflar. Sol kenar rengi durumu gösterir: yeşil açık, gri kapalı, turuncu karara çıkmış. Sağ üstteki simgeler: **künyeyi kopyala**, **not**, **süre ekle**, **aramalarda gösterme**. **Detay** durum, dosya türü, açılış tarihi ve son evrakı açar. Adlar baş harfleri büyük gösterilir (arama etkilenmez). Çok taraflı dosyalarda **Tüm tarafları göster** hepsini açar. Koyu mod: **Ayarlar → Tema** (varsayılanı sistemle aynı).
 
-### 10. Diğer özellikler
+### 11. Diğer özellikler
 
 - **Kopyala:** Dosya künyesini (`Ankara 14. Asliye Hukuk Mahkemesi 2025/123 E.` biçiminde) panoya kopyalar; dilekçeye yapıştırmak için.
 - **Not:** Kalem simgesiyle ya da mevcut notun üzerine tıklayarak (imleç tıklanan yerde) yazın; Enter kaydeder, Shift+Enter yeni satır, Esc vazgeçer. Notlar yalnız bu bilgisayarda tutulur, UYAP'taki notlarla ilgisi yoktur; aramada da bulunur.
@@ -144,7 +154,7 @@ Her dosya bir kart: üstte **mahkeme · esas no**, altında taraflar. Sol kenar 
 
 ### Verileriniz
 
-Dosya listesi, taraf adları, açık dosyaların evrak listesi, duruşma listesi, notlar, süre hatırlatmaları ve ayarlar yalnız bu bilgisayarda Chrome'un eklenti deposunda tutulur; Legaluga'ya ya da başka bir sunucuya gönderilmez. Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve UYAP'a yalnız siz **Güncelle**'ye, **Dosya Görüntüle**'ye ya da bir evrakta **Aç**'a bastığınızda, sizin oturumunuzla, UYAP'ın kendi ekranlarının kullandığı istekleri yapar. Açtığınız evrak saklanmaz. **Ayarlar → Tüm verileri sil** her şeyi siler; eklentiyi kaldırmak da siler. Ayrıntı: [Gizlilik politikası](https://legaluga.com/gizlilik/uyap-asistani).
+Dosya listesi, taraf adları, açık dosyaların evrak listesi, duruşma listesi, (açıksa) son işlem, notlar, süre hatırlatmaları ve ayarlar yalnız bu bilgisayarda Chrome'un eklenti deposunda tutulur; Legaluga'ya ya da başka bir sunucuya gönderilmez. Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve UYAP'a yalnız siz **Güncelle**'ye, **Dosya Görüntüle**'ye, bir evrakta **Aç**'a ya da dosya panelinde bir sekmeye/sorguya bastığınızda (ya da açtıysanız otomatik güncellemede), sizin oturumunuzla, UYAP'ın kendi ekranlarının kullandığı istekleri yapar. Açtığınız evrak, icra özeti, safahat ve borçlu sorgusu sonuçları saklanmaz. **Ayarlar → Tüm verileri sil** her şeyi siler; eklentiyi kaldırmak da siler. Ayrıntı: [Gizlilik politikası](https://legaluga.com/gizlilik/uyap-asistani).
 
 ### Sorun giderme
 
@@ -178,6 +188,7 @@ Dosya listesi, taraf adları, açık dosyaların evrak listesi, duruşma listesi
 - **Kesintisiz güncelleme**: Güncelleme bir iş kaydıdır (`uhdJob`: aşama, istatistikler). Yürüten sekme `uhdProgress.owner/beat` ile sinyal verir; indeks 30 saniyede bir kaydedilir. Sekme yenilenirse `sessionStorage`'daki sekme kimliğinden işin kendisinde olduğunu anlayıp hemen sürdürür; sekme kapanırsa `background.js` (`tabs.onRemoved`) işi serbest bırakır ve açık başka UYAP sekmesi devralır; sinyal 90 sn gelmezse her UYAP sekmesi 20 sn'de bir devralmayı dener (aynı anda birden çok sekme denerse son yazan kazanır, diğerleri çekilir). Oturum düşmesi işi `paused: 'oturum'` ile duraklatır; bir sonraki sayfa yüklemesinde (yeniden girişten sonra) liste tazelenip sürer. Sekme arka plandayken Chrome zamanlayıcıları yavaşlattığı için istekler arası 150 ms bekleme yalnız sekme görünürken yapılır; taraf ve evrak adımlarında aynı anda en çok 3 istek gider (UYAP ekranları da paralel istek yapar), diğer adımlarda istekler birer birer gider.
 - **Duruşmalar** (Güncelle'nin liste adımından hemen sonra): `avukat_durusma_sorgula_brd.ajx {baslangicTarihi, bitisTarihi}` ("gg.aa.yyyy"), 30'ar günlük iki sorgu. Yanıt kayıt dizisidir; `birimId|dosyaNo|dosyaTurKod` indeks anahtarıyla aynıdır. `tarihSaat` "yyyy-mm-dd ss:dd:ss.s" biçimindedir. `dosyaTaraflari` içindeki `isVekil` kaydı avukatın kendisidir ve saklanmaz; `dosyaId` ve `token` saklanmaz. Sonuç `uhdDurusmalar` anahtarındadır.
 - **Evrakı açma**: `list_dosya_evraklar.ajx` ile evrak yeniden alınır (önce kayıttaki `dosyaId`, olmazsa `search_phrase_detayli.ajx` ile taze kimlik), evrak anahtarla bulunur ve `GET /view_document_brd.uyap?evrakId=…&dosyaId=…` (URL kodlanmış, evrak kaydındaki `dosyaId`; kabul edilmezse sorgudaki) ile alınır. Yanıt `application/pdf`; `blob:` adresiyle kapalı gölge DOM'daki pencerede gösterilir. UYAP sayfasında CSP yoktur (yalnız `X-Frame-Options: SAMEORIGIN`).
+- **Dosya paneli**: `dosya_safahat_bilgileri_brd.ajx {dosyaId}` (safahat), `dosyaAyrintiBilgileri_brd.ajx {dosyaId}` (takip ve alacak), `dosya_tahsilat_reddiyat_bilgileri_brd.ajx {dosyaId, dosyaTurKod}` (tahsilat, reddiyat, kalan), `getTakibiKesinlesenBorcluListesi_brd.ajx {dosyaId}`, `dosya_borclu_list.ajx {dosyaId}` (borçlular, `kisiKurumId`), `ws_sorgu_bakiyesi.ajx {params:{dosyaId}}` (bakiye), `borclu_bilgileri_goruntule_<tür>.ajx {dosyaId, kisiKurumId}` (EGM'de ayrıca `pageIndex`). Borçlu sorgu yanıtlarının sonuç alanları sabit olmadığı için ortak alanlar (`borcluBilgileri`, `dosyaOzetDVO`…) atlanıp gerisi genel tablo/alan listesi olarak gösterilir. Kayıttaki `dosyaId` geçersizse dosya yeniden sorgulanır.
 - **Arama**: tamamen yerel; yazarken UYAP'a istek gitmez.
 - **Dosya açma**: `/dosya-sorgulama?mode=detayli&yargiTur=…&yargiBirimi=…&dosyaDurum=…` adresi formu hazır doldurur (form yeniden kurulsun diye önce boş bir yola geçilir). Eklenti alanları doğrular, **Sorgula**'ya basar, sonuç tablosunda satırı bulur ve `aria-label="Pencere Görünümü"` düğmesine tıklar. Adımlar konsola `[Legaluga]` önekiyle yazılır; açılamazsa bildirim tablo teşhisini (satır/düğme sayısı) gösterir.
 - **Açılış duyurusu**: UYAP girişte `sessionStorage.showPopupDuyuru2 = "true"` yapar; eklenti bunu "Tekrar Gösterme" düğmesinin yaptığı gibi `"false"` yapar. Ayarlardan kapatılabilir. KVKK rıza penceresine dokunulmaz.

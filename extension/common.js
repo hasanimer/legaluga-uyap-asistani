@@ -407,6 +407,60 @@
 
   const unseenEvrak = (r, goruldu) => (r.yeniEvrak || []).filter(y => (y.at || 0) > ((goruldu && goruldu[r.key]) || 0));
 
+  // ------------------------------------------------ safahat ve icra
+  // dosya_safahat_bilgileri_brd.ajx → işlemler, en yeni önce. Tarih "gg/aa/yyyy ss:dd" biçiminde gelir.
+  function parseSafahat(res) {
+    const list = res && Array.isArray(res.safahatlar) ? res.safahatlar : null;
+    if (!list) throw new Error('Safahat bilgisi okunamadı.');
+    const str = v => (v == null ? '' : String(v)).trim();
+    const ts = s => {
+      const m = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/.exec(s);
+      return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)) : 0;
+    };
+    return list.map(x => ({
+      tarih: str(x.safahatTarihiSTR), ts: ts(str(x.safahatTarihiSTR)),
+      tur: str(x.safahatTuruAciklama), aciklama: str(x.aciklama), birim: str(x.islemYapanBirim), statu: str(x.safahatStatuKodAciklama)
+    })).filter(x => x.tur || x.aciklama).sort((a, b) => b.ts - a.ts);
+  }
+
+  // Kartta gösterilecek son işlem (saklanan en küçük bilgi).
+  const sonIslemOf = items => (items && items[0] ? { tarih: items[0].tarih.slice(0, 10), tur: items[0].tur || items[0].aciklama } : null);
+
+  // Tutar: 12345.5 → "12.345,50 ₺"
+  const fmtTL = v => (typeof v === 'number' && isFinite(v) ? v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺' : '—');
+
+  // "alacakKalemFaizTutar" → "Alacak kalem faiz tutar" (bilinmeyen alanları okunur göstermek için).
+  const humanKey = k => String(k).replace(/_/g, ' ').replace(/([a-zçğıöşü0-9])([A-ZÇĞİÖŞÜ])/g, '$1 $2').replace(/\s+/g, ' ').trim()
+    .toLocaleLowerCase('tr-TR').replace(/^./, c => c.toLocaleUpperCase('tr-TR'));
+
+  // Borçlu kaydından görünen ad (alan adları sabit olmadığı için ad/unvan içeren alanlar birleştirilir).
+  function borcluAdi(b) {
+    const k = (b && b.kisiTumDVO) || b || {};
+    const pick = re => Object.entries(k).filter(([key, v]) => re.test(key) && typeof v === 'string' && v.trim()).map(([, v]) => v.trim());
+    const unvan = pick(/unvan|kurumAdi/i);
+    if (unvan.length) return unvan[0];
+    const ad = pick(/^(adi|ad|isim)$/i)[0] || '';
+    const soyad = pick(/^(soyadi|soyad)$/i)[0] || '';
+    return (ad + ' ' + soyad).trim() || '';
+  }
+
+  // Borçlu sorgu türleri (UYAP'ın Borçlu Bilgileri ekranındaki sorgular). Hepsi sorgu bakiyesinden düşebilir.
+  const BORCLU_SORGULARI = [
+    { id: 'sgk_sskCalisaniBilgileri', ad: 'SGK – SSK çalışanı' },
+    { id: 'sgk_bagkurCalisaniBilgileri', ad: 'SGK – Bağ-Kur' },
+    { id: 'sgk_kamuCalisaniBilgileri', ad: 'SGK – kamu çalışanı' },
+    { id: 'sgk_kamuEmekliBilgileri', ad: 'SGK – kamu emeklisi' },
+    { id: 'sgk_isYeriBilgileri', ad: 'SGK – iş yeri' },
+    { id: 'banka', ad: 'Banka' },
+    { id: 'takbis', ad: 'TAKBİS (tapu)' },
+    { id: 'egm_brd', ad: 'EGM (araç)', extra: { pageIndex: 0 } },
+    { id: 'gsm', ad: 'GSM' },
+    { id: 'firma', ad: 'Firma / ticaret sicili' },
+    { id: 'icra_dosyasi', ad: 'Borçlunun diğer icra dosyaları' }
+  ];
+  // Sorgu yanıtında her sorguda tekrarlanan, sonucu taşımayan alanlar.
+  const SORGU_ORTAK = new Set(['borcluBilgileri', 'sorgulayanBilgileri', 'portalTuru', 'dosyaOzetDVO', 'sonuc', 'id', 'isCompressed', 'htmlHataKodList', 'isMock', 'showPersonel']);
+
   // ------------------------------------------------ görünüm
   // UYAP adları büyük harfle verir; yalnız baş harfleri büyük gösterilir (arama etkilenmez).
   // Nokta içeren kısaltmalar (A.Ş., T.C., LTD.) ve 2-3 harfli şirket ekleri olduğu gibi kalır.
@@ -474,5 +528,5 @@
   const fmtNum = n => Number(n || 0).toLocaleString('tr-TR');
   const fmtDate = ts => ts ? new Date(ts).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles, trTitle, cleanDurum, cleanBirim, evrakTakipAcik, BACKUP_APP, BACKUP_FORMAT, BACKUP_KEYS, checkBackup, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, parseDurusma, upcomingDurusmalar, uyapDate, durusmaIcs };
+  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak, personFiles, parseSafahat, sonIslemOf, fmtTL, humanKey, borcluAdi, BORCLU_SORGULARI, SORGU_ORTAK, trTitle, cleanDurum, cleanBirim, evrakTakipAcik, BACKUP_APP, BACKUP_FORMAT, BACKUP_KEYS, checkBackup, trToIso, todayIso, addPeriod, daysLeft, sureUyarilari, activeSureler, isTebligat, parseDurusma, upcomingDurusmalar, uyapDate, durusmaIcs };
 })();
