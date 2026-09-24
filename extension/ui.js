@@ -1,7 +1,7 @@
 // Arama arayüzü: hem eklenti popup'ında hem UYAP sayfasındaki yan panelde aynı kod kullanılır.
 (() => {
   if (globalThis.UHD.mountUI) return;
-  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs } = globalThis.UHD;
+  const { search, fmtNum, fmtDate, norm, detectMyName, myKeys, isClient, nameKey, BRAND, csvCell, csvDosyaNo, unseenEvrak, trDateTs, lastEvrak } = globalThis.UHD;
   const EVRAK_SHOW = 3;
   const LIMIT = 60;
   const RECENT_MAX = 10;
@@ -30,6 +30,8 @@
 .uhd .chip.new{border-color:#b2ccff;color:#1849a9}
 .uhd .chip.new.on{background:#1849a9;border-color:#1849a9;color:#fff}
 .uhd .badge.new{background:#e0eaff;color:#1849a9}
+.uhd .son{margin-top:2px;font-size:12px;color:var(--muted)}
+.uhd .son b{font-weight:600;color:#344054}
 .uhd .evrak{margin-top:5px;padding:5px 8px;border-left:3px solid #528bff;background:#f0f5ff;border-radius:0 6px 6px 0;font-size:12px;cursor:default}
 .uhd .evrak .head{display:flex;justify-content:space-between;gap:8px;font-weight:600;color:#1849a9}
 .uhd .evrak ul{margin:3px 0 0;padding:0;list-style:none}
@@ -388,6 +390,21 @@
       await chrome.storage.local.set({ uhdEvrakGoruldu: next });
     }
 
+    // "Son evrak 12/09/2026 · Bilirkişi Raporu" (bağlı dosyadansa hangi dosya olduğu da).
+    function sonText(r) {
+      const s = lastEvrak(r);
+      if (!s || !s.onay) return '';
+      return [s.onay, s.tur, evrakDosya(r, s.dosya)].filter(Boolean).join(' · ');
+    }
+
+    function sonLine(r) {
+      const t = sonText(r);
+      if (!t) return null;
+      const s = lastEvrak(r);
+      const title = s.gonderim && s.gonderim !== s.onay ? `Onay ${s.onay}, sisteme gönderim ${s.gonderim}` : `Onay ${s.onay}`;
+      return el('div', { class: 'son', title: 'Dosyadaki en yeni evrak (son güncellemeye göre). ' + title }, 'Son evrak: ', el('b', null, s.onay), t.slice(s.onay.length));
+    }
+
     function item(r, i, toks, keys) {
       const closed = r.sorguDurum === 1;
       const open = el('button', { class: 'open', title: 'Dosyayı UYAP’ta Pencere Görünümü ile aç' }, 'Dosya Görüntüle');
@@ -415,6 +432,7 @@
             el('span', { class: 'badge' + (closed ? ' closed' : '') }, r.durum || (closed ? 'Kapalı' : 'Açık')),
             yeniMap.has(r.key) ? el('span', { class: 'badge new' }, 'Yeni evrak') : null,
             [r.dosyaTur, r.acilis].filter(Boolean).join(' · ')),
+          sonLine(r),
           partyEls,
           evrakBlock(r, toks),
           noteBlock(r, toks)),
@@ -507,7 +525,7 @@
 
     function exportCsv() {
       const keys = myKeys(myName());
-      const rows = [['Dosya No', 'Birim', 'Yargı Türü', 'Dosya Türü', 'Durum', 'Açılış', 'Müvekkil', 'Diğer Taraflar', 'Karşı Taraf Vekilleri', 'Not']];
+      const rows = [['Dosya No', 'Birim', 'Yargı Türü', 'Dosya Türü', 'Durum', 'Açılış', 'Müvekkil', 'Diğer Taraflar', 'Karşı Taraf Vekilleri', 'Son Evrak', 'Not']];
       const sorted = [...records].sort((a, b) =>
         (a.yargiTuruAdi || '').localeCompare(b.yargiTuruAdi || '', 'tr') ||
         (a.birimAdi || '').localeCompare(b.birimAdi || '', 'tr') ||
@@ -522,6 +540,7 @@
           clients.map(p => `${p.adi}${p.rol ? ' (' + p.rol + ')' : ''}`).join(', '),
           others.map(p => `${p.rol ? p.rol + ': ' : ''}${p.adi}`).join('; '),
           vek.join(', '),
+          sonText(r),
           notes[r.key] || ''
         ]);
       }

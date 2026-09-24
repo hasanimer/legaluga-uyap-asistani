@@ -7,7 +7,7 @@
   if (window.__uhdLoaded) return;
   window.__uhdLoaded = true;
 
-  const { TURLER, norm, openPath, parseEvraklar, diffEvrak } = globalThis.UHD;
+  const { TURLER, norm, openPath, parseEvraklar, diffEvrak, sonEvrak } = globalThis.UHD;
   const OWNER = Math.random().toString(36).slice(2);
   const DELAY = 150;
   const TARAF_V = 2; // 2: taraflarla birlikte vekiller de saklanır
@@ -225,7 +225,8 @@
         merged.set(k, {
           ...r,
           taraflar: o ? o.taraflar : null, tarafAt: o ? o.tarafAt : 0, tarafV: o ? o.tarafV : 0,
-          evrakSeen: o ? o.evrakSeen : undefined, evrakAt: o ? o.evrakAt : 0, yeniEvrak: o ? o.yeniEvrak : undefined
+          evrakSeen: o ? o.evrakSeen : undefined, evrakAt: o ? o.evrakAt : 0, yeniEvrak: o ? o.yeniEvrak : undefined,
+          sonEvrak: o ? o.sonEvrak : undefined
         });
       }
       for (const [k, o] of old) {
@@ -271,6 +272,7 @@
             const { seen, yeni } = diffEvrak(r.evrakSeen, items);
             r.evrakSeen = seen;
             r.evrakAt = Date.now();
+            r.sonEvrak = sonEvrak(items);
             evrakBad += bad;
             if (yeni.length) {
               const at = Date.now();

@@ -59,6 +59,7 @@ Dosya açılamazsa bildirimde nedeni yazar; Dosya Sorgulama ekranı yine dolduru
 Her **Güncelle**'de açık dosyaların evrak listesi (UYAP'taki **Evrak Getir** ekranının listesi) bir önceki güncellemeyle karşılaştırılır:
 
 - **İlk güncelleme başlangıçtır:** o ana kadarki evraklar "görülmüş" sayılır, yeni evrak gösterilmez. Yeni evraklar ikinci güncellemeden itibaren çıkar.
+- Her açık dosyanın kartında **Son evrak** tarihi ve türü görünür (ör. `Son evrak 12/09/2026 · Bilirkişi Raporu`); Excel'e aktarımda da ayrı sütundur. Tarih son güncellemedeki duruma göredir.
 - Yeni evrak gelen dosyalarda **Yeni evrak** etiketi ve evrakların türü, tarihi, göndereni görünür. Tarih UYAP'ın sıraladığı **onay tarihi**dir; sisteme gönderim tarihi farklıysa parantez içinde o da yazılır (ör. `Onay 12/09/2026 (sisteme gönderim 10/09/2026)`).
 - Dosyaya bağlı talimat ya da soruşturma dosyasına gelen evrak da gösterilir; hangi dosyaya geldiği ayrıca yazılır.
 - Paneldeki **… dosyada … yeni evrak var · Göster** bildirimi ya da **Yeni evrak** filtresi yalnız bu dosyaları listeler.

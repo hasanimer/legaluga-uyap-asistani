@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 createRequire(import.meta.url)('../extension/common.js');
-const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search } = globalThis.UHD;
+const { parseEvraklar, diffEvrak, unseenEvrak, evrakKey, trDateTs, search, sonEvrak, lastEvrak } = globalThis.UHD;
 
 // UYAP evrakId/dosyaId'yi her yanıtta yeniden şifreler; testte de her çağrıda farklı kimlik üretilir.
 let sayac = 0;
@@ -87,4 +87,14 @@ test('"Yeni evrak" filtresi yalnız yeni evraklı dosyaları, en yeni evrak önd
   assert.equal(bul(''), 'c,a');
   assert.equal(bul('2025/1'), 'a');
   assert.equal(search(records, '', {}).total, 0);
+});
+
+test('dosyadaki son evrak onay tarihine göre bulunur; eski kayıtlarda anahtarlardan çıkarılır', () => {
+  const items = parseEvraklar(yanit(ilk)).items;
+  assert.deepEqual(sonEvrak(items), { tur: 'Kapalı E-Tebliğ Mazbatası', onay: '02/08/2026', gonderim: '02/08/2026', dosya: '2025/9101(Ceza Dava Dosyası)' });
+  assert.equal(sonEvrak([]), null);
+  const seen = diffEvrak(undefined, items).seen;
+  assert.deepEqual(lastEvrak({ evrakSeen: seen }), { tur: 'Kapalı E-Tebliğ Mazbatası', onay: '02/08/2026', gonderim: undefined, dosya: undefined });
+  assert.equal(lastEvrak({ sonEvrak: { onay: '01/01/2026', tur: 'X' }, evrakSeen: seen }).onay, '01/01/2026');
+  assert.equal(lastEvrak({}), null);
 });

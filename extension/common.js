@@ -231,6 +231,27 @@
   }
 
   // Görüldü olarak işaretlenmemiş yeni evraklar (goruldu: {kayıtKey: zaman}).
+  // Dosyadaki en yeni evrak (onay tarihine göre; aynı günde UYAP'ın sırasındaki ilk evrak).
+  function sonEvrak(items) {
+    let best = null, bestTs = -1;
+    for (const i of items || []) {
+      const ts = trDateTs(i.onay);
+      if (ts > bestTs) { best = i; bestTs = ts; }
+    }
+    return best && { tur: best.tur, onay: best.onay, gonderim: best.gonderim, dosya: best.dosya };
+  }
+
+  // Kayıtta sonEvrak yoksa (1.1.0'da taranmış dosyalar) görülen evrak anahtarlarından çıkarılır:
+  // anahtar "birimEvrakNo|onay tarihi|tür" biçimindedir.
+  function lastEvrak(r) {
+    if (r.sonEvrak) return r.sonEvrak;
+    if (!Array.isArray(r.evrakSeen) || !r.evrakSeen.length) return null;
+    return sonEvrak(r.evrakSeen.map(k => {
+      const [, onay, ...tur] = String(k).split('|');
+      return { onay, tur: tur.join('|') };
+    }));
+  }
+
   const unseenEvrak = (r, goruldu) => (r.yeniEvrak || []).filter(y => (y.at || 0) > ((goruldu && goruldu[r.key]) || 0));
 
   // UYAP'tan gelen değerler (taraf, vekil adı…) =, +, -, @ ya da sekme/satır başıyla başlıyorsa
@@ -246,5 +267,5 @@
   const fmtNum = n => Number(n || 0).toLocaleString('tr-TR');
   const fmtDate = ts => ts ? new Date(ts).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak };
+  globalThis.UHD = { TURLER, ORIGIN, BRAND, norm, tokens, nameKey, detectMyName, myKeys, isClient, search, openPath, fmtNum, fmtDate, csvCell, csvDosyaNo, evrakKey, trDateTs, parseEvraklar, diffEvrak, unseenEvrak, sonEvrak, lastEvrak };
 })();
