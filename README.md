@@ -76,6 +76,6 @@ Chrome eklentiyi bu klasörden çalıştırır; klasörü sonradan silmeyin veya
 
 ## Açık kaynak ve önemli notlar
 
-Kaynak kodu [MIT lisansıyla](LICENSE) yayımlanır. Hata ve öneriler için [issue açabilirsiniz](https://github.com/hasanimer/legaluga-uyap-asistani/issues).
+Kaynak kodu [MIT lisansıyla](LICENSE) yayımlanır. Hata ve öneriler için [issue açabilirsiniz](https://github.com/hasanimer/legaluga-uyap-asistani/issues). Güvenlik açıklarını [özel bildirim kanalı üzerinden](SECURITY.md) iletin.
 
 Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve T.C. Adalet Bakanlığı veya UYAP'ın resmî ürünü değildir. Süre hatırlatıcısında tarih ve süreyi siz girersiniz; önerilen son günü ve duruşma bilgilerini UYAP üzerinden doğrulayın.
