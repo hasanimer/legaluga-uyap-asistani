@@ -49,6 +49,8 @@
 | Günlük işlere odaklanın | **Dosyalar · Duruşmalar · Yeni evrak** görünümleri arasında geçin. Duruşmalarda **Bugün / Önümüzdeki 7 gün / Tümü** aralığını seçin. |
 | Aradığınızı daraltın | **Filtreler**'i açın; durum, yargı türü ve taraf seçin. **Temizle** ile filtreleri kaldırın. Sonuçları uygunluğa, açılış tarihine veya dosya numarasına göre sıralayın. |
 | Kendinize göre kullanın | Üstteki tema düğmesiyle açık/koyu görünümü değiştirin. UYAP'ın sağ kenarındaki paneli **sabitleyin**, sayfaya tıklarken açık kalsın. |
+| UYAP ekranını görün | Sayfa içi panel açılınca UYAP kalan alana sığar; saat ve profil bilgileri görünür kalır. Paneli kapatınca ekran eski boyutuna döner. |
+| Duyuruları kaçırmayın | UYAP duyuruları sağ altta küçük bir bildirim olarak görünür. Tıklayıp tamamını okuyun. |
 
 Arama kutusundayken **↑ ↓** ile sonuç seçin, **Enter** ile açın, **Esc** ile geri dönün; **Tab** ile düğmelere geçin. Aynı kişinin dosyalarını adına tıklayarak görün, dosya kartına not ekleyin. Duruşma uyarılarını **Ayarlar → UYAP → Yaklaşan duruşmaları hatırlat** seçeneğinden yönetin.
 

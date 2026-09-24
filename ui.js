@@ -1287,7 +1287,7 @@
         el('h3', null, 'UYAP'),
         el('div', { class: 'box' },
           check('durusmaBildirim', true, 'Yaklaşan duruşmaları hatırlat', 'Bugün ve yarınki duruşmaları bildirir. Duruşmalar ekranına her zaman ulaşabilirsiniz.', () => autoNotice()),
-          check('duyuruGizle', false, 'Girişteki duyuru penceresini gizle', 'Önerilmez: kesinti ve bakım duyurularını kaçırabilirsiniz. KVKK onay penceresine hiçbir durumda dokunulmaz.')),
+          check('duyuruBildirim', true, 'Duyuruları küçük bildirim olarak göster', 'UYAP duyuruları sağ altta görünür; tıklayınca tamamını okuyabilirsiniz. Kapatırsanız UYAP’ın normal duyuru penceresi açılır.')),
 
         el('h3', null, 'Veriler'),
         el('div', { class: 'box' },

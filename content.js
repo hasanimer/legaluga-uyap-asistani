@@ -96,6 +96,7 @@
   }
   function stopInvalidatedContext() {
     contextGone = true;
+    hidePanel();
     if (job) job.lost = true;
     if (resumeInterval !== null) clearInterval(resumeInterval);
     if (autoInterval !== null) clearInterval(autoInterval);
@@ -876,14 +877,16 @@
   border-radius:12px 0 0 12px;padding:16px 10px;min-width:40px;min-height:104px;font:600 12px "Segoe UI",system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 16px rgba(16,75,73,.24);z-index:1;transition:background .15s,box-shadow .15s}
 .launch:hover{background:${BRAND.primaryDark};box-shadow:0 6px 20px rgba(16,75,73,.32)}
 .launch[aria-expanded=true]{visibility:hidden}
-.panel{position:fixed;top:0;right:0;height:100vh;height:100dvh;width:min(480px,100vw);box-shadow:-8px 0 36px rgba(0,0,0,.2);z-index:2;overscroll-behavior:contain}
+.panel{position:fixed;top:0;right:0;height:100vh;height:100dvh;width:var(--dock-width,min(480px,100vw));box-shadow:-8px 0 36px rgba(0,0,0,.2);z-index:2;overscroll-behavior:contain}
 .panel .panel-pin{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;padding:7px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer}
 .panel .panel-pin svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .panel .panel-pin:hover,.panel .panel-pin[aria-pressed=true]{background:var(--soft);border-color:var(--bord);color:var(--accent-text)}
 .panel .panel-pin:disabled{opacity:.55;cursor:wait}
-.launch:focus-visible,.toast button:focus-visible,.viewer :is(button,a):focus-visible{outline:3px solid ${BRAND.focus};outline-offset:3px}
-.toast{position:fixed;right:16px;bottom:16px;max-width:440px;background:#1d2939;color:#fff;padding:10px 12px 10px 14px;border-radius:10px;
-  width:max-content;max-width:min(440px,calc(100vw - 32px));box-sizing:border-box;font:13px/1.45 "Segoe UI",system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:3;display:flex;gap:10px;align-items:center}
+.launch:focus-visible,.toast button:focus-visible,.announcement button:focus-visible,.viewer :is(button,a):focus-visible{outline:3px solid ${BRAND.focus};outline-offset:3px}
+.notifications{position:fixed;right:16px;bottom:16px;width:max-content;max-width:min(440px,calc(100vw - 32px));z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none}
+.notifications>*{pointer-events:auto;max-width:100%;box-sizing:border-box}
+.toast{background:#1d2939;color:#fff;padding:10px 12px 10px 14px;border-radius:10px;
+  width:max-content;font:13px/1.45 "Segoe UI",system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center}
 .toast .msg{white-space:pre-line;flex:1;min-width:0;overflow-wrap:anywhere}
 .toast.busy .msg::before{content:"";display:inline-block;width:10px;height:10px;margin-right:7px;border:2px solid rgba(255,255,255,.35);
   border-top-color:#fff;border-radius:50%;animation:uhdspin .8s linear infinite;vertical-align:-1px}
@@ -892,8 +895,21 @@
 .toast button:hover{background:rgba(255,255,255,.12)}
 .toast button.close{border:0;font-size:20px;line-height:1;min-width:32px;padding:4px;opacity:.9}
 .toast.err{background:#8a1f17}.toast.ok{background:#12805c}
-.panel:not([hidden]) ~ .toast{right:496px;max-width:min(440px,calc(100vw - 512px))}
-@media(max-width:800px){.panel:not([hidden]) ~ .toast{right:12px;bottom:80px;max-width:calc(100vw - 24px)}.toast{right:12px;bottom:12px;max-width:calc(100vw - 24px)}}
+.panel:not([hidden]) ~ .notifications{right:calc(var(--dock-width,480px) + 16px);max-width:min(440px,calc(100vw - var(--dock-width,480px) - 32px))}
+@media(max-width:800px){.panel:not([hidden]) ~ .notifications{right:12px;bottom:80px;max-width:calc(100vw - 24px)}.notifications{right:12px;bottom:12px;max-width:calc(100vw - 24px)}}
+:host([data-dock=bottom]) .panel{top:auto;bottom:0;width:100vw;height:var(--dock-height);box-shadow:0 -8px 36px rgba(0,0,0,.2)}
+:host([data-dock=bottom]) .panel:not([hidden]) ~ .notifications{right:12px;bottom:calc(var(--dock-height) + 12px);max-width:calc(100vw - 24px)}
+.announcement{width:320px;display:flex;align-items:center;gap:4px;padding:8px;border:1px solid var(--shell-line);border-left:3px solid var(--shell-accent);border-radius:12px;background:var(--shell-bg);color:var(--shell-text);box-shadow:0 6px 24px #0002;font:12px/1.45 "Segoe UI",system-ui,sans-serif}
+.announcement .read{display:block;min-width:0;flex:1;border:0;background:none;color:inherit;text-align:left;padding:2px 6px;font:inherit;cursor:pointer}
+.announcement strong{display:block;color:var(--shell-accent);font-size:12px}
+.announcement .preview{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;color:var(--shell-muted);margin-top:2px}
+.announcement .close{flex:none;width:30px;height:30px;border:0;border-radius:7px;background:none;color:var(--shell-muted);font-size:20px;cursor:pointer}
+.announcement button:hover{background:var(--shell-soft);border-radius:7px}
+.viewer.announcement-viewer .box{width:min(720px,96vw);height:auto;max-height:88vh;max-height:88dvh}
+.announcement-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:20px;line-height:1.65;overflow-wrap:anywhere}
+.announcement-body img{max-width:100%;height:auto}.announcement-body a[href]{color:var(--shell-accent);text-decoration:underline}
+.announcement-body :is(h1,h2,h3){line-height:1.35}.announcement-body table{display:block;max-width:100%;overflow:auto;border-collapse:collapse}
+.announcement-body :is(td,th){border:1px solid var(--shell-line);padding:6px}
 @media(prefers-reduced-motion:reduce){.launch{transition:none}.toast.busy .msg::before{animation:none}}
 .viewer{position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:4;display:flex;align-items:center;justify-content:center}
 .viewer .box{background:var(--shell-bg);width:min(1000px,96vw);height:92vh;height:92dvh;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35);font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:var(--shell-text)}
@@ -931,9 +947,102 @@
 .viewer .dp-more{margin-top:10px;font-size:12px}
 [hidden]{display:none!important}
 `;
-  let panel, ui, launch, pinButton, toastEl, toastTimer, shadowRoot, focusBeforePanel;
+  let panel, ui, launch, pinButton, toastEl, toastTimer, shadowRoot, focusBeforePanel, announcementEl;
   let pagePrefs = {}, toastRemaining = 0, toastStarted = 0;
   const pageDarkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  // Geçici stil kaldırılınca UYAP'ın kuralları aynen geri gelir; inline stillerine
+  // veya uygulamanın DOM yapısına dokunmadan panel için ayrı alan açılır.
+  let dockStyle, dockObserver, dockFrame = 0, dockTimer = 0;
+  const dockFixed = new Map();
+  const DOCK_FIXED_ATTR = 'data-legaluga-dock-fixed';
+
+  function viewportFixed(node) {
+    if (getComputedStyle(node).position !== 'fixed' || !node.getClientRects().length) return false;
+    for (let parent = node.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+      const css = getComputedStyle(parent);
+      // Bunlar zaten kendi kapsayıcısıyla ölçeklenir; ikinci kez düzeltmeyiz.
+      if (css.transform !== 'none' || css.translate !== 'none' || css.rotate !== 'none' || css.scale !== 'none' ||
+          css.perspective !== 'none' || css.filter !== 'none' || /(?:layout|paint|strict|content)/.test(css.contain) ||
+          /(?:transform|translate|scale|rotate|filter|perspective)/.test(css.willChange)) return false;
+    }
+    return true;
+  }
+
+  function fitPageBesidePanel() {
+    dockFrame = 0;
+    if (!panel || panel.hidden || !document.body) return;
+    // Ölçüleri özgün sayfadan al; aynı kare içinde yeni stil yerleşir.
+    if (dockStyle) dockStyle.remove();
+    const width = window.innerWidth, height = window.innerHeight;
+    const stacked = width < 800;
+    const panelWidth = stacked ? width : Math.min(480, Math.max(320, Math.round(width * .30)));
+    const panelHeight = stacked ? Math.min(Math.round(height * .60), Math.max(240, height - 160)) : height;
+    const availableWidth = stacked ? width : width - panelWidth;
+    const availableHeight = stacked ? height - panelHeight : height;
+    const ratio = availableWidth / width;
+    const bodyCss = getComputedStyle(document.body);
+    const zoom = (Number.parseFloat(bodyCss.zoom) || 1) * ratio;
+    const host = shadowRoot.host;
+    host.dataset.dock = stacked ? 'bottom' : 'side';
+    host.style.setProperty('--dock-width', panelWidth + 'px');
+    host.style.setProperty('--dock-height', panelHeight + 'px');
+    const rules = [
+      `html{overflow-x:hidden!important;${stacked ? 'overflow-y:hidden!important;' : ''}}`,
+      `body{zoom:${zoom}!important;width:${bodyCss.width}!important;max-width:none!important;min-width:0!important;` +
+        `min-height:${availableHeight / zoom}px!important;` +
+        (stacked ? `height:${availableHeight / zoom}px!important;max-height:${availableHeight / zoom}px!important;overflow:auto!important;` :
+          (bodyCss.overflowY !== 'visible' && document.body.getBoundingClientRect().height <= height + 1 ? `height:${availableHeight / zoom}px!important;` : '')) + '}'
+    ];
+    // Zoom tek başına viewport'a bağlı right:0 başlığı sağda bırakır.
+    // Özgün yatay ölçülerini sabitleriz; dikey fixed davranışı sürer.
+    for (const node of document.body.querySelectorAll('*')) {
+      if (!viewportFixed(node)) continue;
+      const css = getComputedStyle(node);
+      if (!dockFixed.has(node)) dockFixed.set(node, { original: node.getAttribute(DOCK_FIXED_ATTR), id: String(dockFixed.size + 1) });
+      const { id } = dockFixed.get(node);
+      node.setAttribute(DOCK_FIXED_ATTR, id);
+      const bottom = stacked && css.bottom !== 'auto' ? `bottom:calc(${css.bottom} + ${panelHeight / zoom}px)!important;` : '';
+      rules.push(`[${DOCK_FIXED_ATTR}="${id}"]{left:${css.left}!important;right:auto!important;width:${css.width}!important;max-width:${availableWidth / zoom}px!important;${bottom}}`);
+    }
+    if (!dockStyle) dockStyle = document.createElement('style');
+    dockStyle.textContent = rules.join('\n');
+    document.documentElement.append(dockStyle);
+  }
+
+  function schedulePanelFit() {
+    if (!panel || panel.hidden || dockFrame) return;
+    dockFrame = requestAnimationFrame(fitPageBesidePanel);
+  }
+
+  function startPanelDock() {
+    fitPageBesidePanel();
+    window.addEventListener('resize', schedulePanelFit);
+    if (!dockObserver) dockObserver = new MutationObserver(() => {
+      clearTimeout(dockTimer);
+      dockTimer = setTimeout(schedulePanelFit, 120);
+    });
+    dockObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+  }
+
+  function stopPanelDock() {
+    window.removeEventListener('resize', schedulePanelFit);
+    if (dockObserver) dockObserver.disconnect();
+    clearTimeout(dockTimer);
+    if (dockFrame) cancelAnimationFrame(dockFrame);
+    dockFrame = 0;
+    if (dockStyle) dockStyle.remove();
+    for (const [node, { original }] of dockFixed) {
+      if (original === null) node.removeAttribute(DOCK_FIXED_ATTR);
+      else node.setAttribute(DOCK_FIXED_ATTR, original);
+    }
+    dockFixed.clear();
+    if (shadowRoot) {
+      delete shadowRoot.host.dataset.dock;
+      shadowRoot.host.style.removeProperty('--dock-width');
+      shadowRoot.host.style.removeProperty('--dock-height');
+    }
+  }
 
   function applyPagePrefs(prefs) {
     pagePrefs = prefs || {};
@@ -958,7 +1067,8 @@
     launch = el('button', { class: 'launch', type: 'button', title: BRAND.name + ' · Dosyalarınızda ara', 'aria-label': BRAND.name + ' panelini aç', 'aria-expanded': 'false', 'aria-controls': 'legaluga-search-panel' }, 'Dosya Ara');
     panel = el('div', { class: 'panel', id: 'legaluga-search-panel', role: 'dialog', 'aria-label': BRAND.name, 'aria-modal': 'false', hidden: true });
     toastEl = el('div', { class: 'toast', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', hidden: true });
-    shadow.append(el('style', null, PAGE_CSS), launch, panel, toastEl);
+    announcementEl = el('div', { class: 'announcement', role: 'status', 'aria-live': 'polite', hidden: true });
+    shadow.append(el('style', null, PAGE_CSS), launch, panel, el('div', { class: 'notifications' }, toastEl, announcementEl));
     shadowRoot = shadow;
     ui = mountUI(panel, {
       mode: 'page',
@@ -1013,9 +1123,12 @@
         hidePanel(true);
       }
     });
-    // Panel dışına tıklanınca kapat (gölge DOM içindeki tıklamaların hedefi host olarak görünür).
-    document.addEventListener('mousedown', e => {
-      if (!panel.hidden && !pagePrefs.panelSabit && e.target !== host) hidePanel();
+    // UYAP'ın tıklama işlemi bitsin; basılan öğe pointerdown ile click arasında kaymasın.
+    // Gölge DOM içindeki tıklamaların hedefi host olarak görünür.
+    document.addEventListener('click', e => {
+      if (!panel.hidden && !pagePrefs.panelSabit && e.target !== host) {
+        setTimeout(() => { if (!pagePrefs.panelSabit) hidePanel(); }, 0);
+      }
     }, true);
     toastEl.addEventListener('mouseenter', pauseToast);
     toastEl.addEventListener('mouseleave', resumeToast);
@@ -1027,6 +1140,7 @@
     if (!panel) return;
     if (panel.hidden) focusBeforePanel = document.activeElement;
     panel.hidden = false;
+    startPanelDock();
     launch.setAttribute('aria-expanded', 'true');
     launch.setAttribute('aria-label', BRAND.name + ' panelini kapat');
     ui.focus();
@@ -1035,6 +1149,7 @@
   function hidePanel(restoreFocus = false) {
     if (!panel || panel.hidden) return;
     panel.hidden = true;
+    stopPanelDock();
     launch.setAttribute('aria-expanded', 'false');
     launch.setAttribute('aria-label', BRAND.name + ' panelini aç');
     if (restoreFocus) {
@@ -1413,37 +1528,143 @@
   }
 
   // ---------------------------------------------------------------- Açılış duyurusu
-  // UYAP girişte sessionStorage "showPopupDuyuru2" = "true" yapar; ana sayfa bu işaret "true" iken
-  // duyuru penceresini gösterir. Penceredeki "Tekrar Gösterme" düğmesi yalnızca işareti "false" yapar;
-  // aynısını girişte kendiliğinden yapıyoruz. (KVKK rıza penceresine dokunulmaz.)
-  let hideDuyuru = false;
-  let duyuruQueued = false;
+  // Yalnız UYAP'ın #duyuruicerik penceresi küçültülür; KVKK ve diğer onay pencereleri kapsam dışıdır.
+  // İçerik okunmadan showPopupDuyuru2 değiştirilmez; duyuru servisine yeni sorgu gönderilmez.
+  let compactDuyuru = false, duyuruQueued = false, lastAnnouncement = null, announcementViewer = null;
+  let dismissedAnnouncement = '';
+  const closingAnnouncements = new WeakSet();
 
-  function suppressDuyuru() {
-    duyuruQueued = false;
-    if (!hideDuyuru) return;
-    try {
-      if (sessionStorage.getItem('showPopupDuyuru2') === 'true') sessionStorage.setItem('showPopupDuyuru2', 'false');
-    } catch {}
-    // İşaret zamanında değişmediyse açılmış duyuru penceresini UYAP'ın kendi düğmesiyle kapat.
-    const body = document.getElementById('duyuruicerik');
-    const pop = body && body.closest('.dx-overlay-content');
-    if (pop && visible(pop)) {
-      const btn = [...pop.querySelectorAll('.dx-button')].find(b => norm(b.textContent.trim()) === 'tekrar gosterme');
-      if (btn) btn.click();
-    }
+  function announcementSnapshot(body, pop) {
+    const content = el('div', { class: 'announcement-body' });
+    let unsupported = false;
+    const allowed = new Set(['P', 'DIV', 'SPAN', 'BR', 'HR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'CODE', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'A', 'IMG']);
+    const safeUrl = (value, image) => {
+      if (!value) return '';
+      if (image && /^data:image\/(png|jpeg|gif|webp);base64,/i.test(value)) return value;
+      try {
+        const url = new URL(value, document.baseURI);
+        return /^https?:$/.test(url.protocol) ? url.href : '';
+      } catch { return ''; }
+    };
+    const copy = (node, target) => {
+      if (node.nodeType === 3) { target.append(node.textContent); return; }
+      if (node.nodeType !== 1) return;
+      const tag = node.tagName;
+      if (['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT'].includes(tag)) return;
+      if (['IFRAME', 'OBJECT', 'EMBED', 'FORM', 'INPUT', 'BUTTON', 'VIDEO', 'AUDIO', 'CANVAS', 'SVG'].includes(tag)) { unsupported = true; return; }
+      if (!allowed.has(tag)) { for (const child of node.childNodes) copy(child, target); return; }
+      const item = el(tag.toLowerCase());
+      if (tag === 'A') {
+        const href = safeUrl(node.getAttribute('href'), false);
+        if (href) { item.setAttribute('href', href); item.setAttribute('target', '_blank'); item.setAttribute('rel', 'noopener noreferrer'); }
+      }
+      if (tag === 'IMG') {
+        const src = safeUrl(node.getAttribute('src'), true);
+        if (!src) { unsupported = true; return; }
+        item.setAttribute('src', src);
+        item.setAttribute('alt', node.getAttribute('alt') || 'Duyuru görseli');
+        item.setAttribute('loading', 'lazy');
+      }
+      if (tag === 'TD' || tag === 'TH') for (const attr of ['colspan', 'rowspan']) {
+        const value = node.getAttribute(attr);
+        if (/^[1-9]\d?$/.test(value || '')) item.setAttribute(attr, value);
+      }
+      for (const child of node.childNodes) copy(child, item);
+      target.append(item);
+      if (['P', 'DIV', 'BR', 'HR', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TR', 'BLOCKQUOTE', 'PRE'].includes(tag)) target.append('\n');
+    };
+    for (const node of body.childNodes) copy(node, content);
+    const text = content.textContent.replace(/\s+/g, ' ').trim();
+    if (unsupported || (!text && !content.querySelector('img'))) return null;
+    const titleNode = pop.querySelector('.dx-popup-title .dx-toolbar-label, .dx-popup-title');
+    const title = (titleNode && titleNode.textContent.trim()) || 'UYAP duyurusu';
+    return { content, title, preview: text || 'Duyuru görselini açıp inceleyin.', signature: title + '\n' + content.innerHTML };
   }
 
-  new MutationObserver(() => {
-    if (hideDuyuru && !duyuruQueued) { duyuruQueued = true; setTimeout(suppressDuyuru, 0); }
-  }).observe(document.documentElement, { childList: true, subtree: true });
+  function renderAnnouncement() {
+    if (!announcementEl) return;
+    announcementEl.hidden = !compactDuyuru || !lastAnnouncement || dismissedAnnouncement === lastAnnouncement.signature;
+    if (announcementEl.hidden) return;
+    const read = el('button', { class: 'read', type: 'button', title: 'Duyurunun tamamını oku', 'aria-label': 'UYAP duyurusunu oku: ' + lastAnnouncement.title },
+      el('strong', null, 'UYAP duyurusu · Oku'), el('span', { class: 'preview' }, lastAnnouncement.preview));
+    read.addEventListener('click', openAnnouncement);
+    const close = el('button', { class: 'close', type: 'button', title: 'Bildirimi kapat', 'aria-label': 'Duyuru bildirimini kapat' }, '×');
+    close.addEventListener('click', () => {
+      dismissedAnnouncement = lastAnnouncement.signature;
+      announcementEl.hidden = true;
+      if (panel.hidden) launch.focus({ preventScroll: true }); else ui.focus();
+    });
+    announcementEl.replaceChildren(read, close);
+  }
 
-  chrome.storage.local.get('uhdPrefs').then(({ uhdPrefs }) => {
-    hideDuyuru = !!(uhdPrefs && uhdPrefs.duyuruGizle);
-    suppressDuyuru();
+  function openAnnouncement() {
+    if (announcementViewer) { announcementViewer.querySelector('button').focus(); return; }
+    if (!lastAnnouncement) return;
+    const snapshot = lastAnnouncement;
+    const wasPanelOpen = !panel.hidden, previous = shadowRoot.activeElement || document.activeElement;
+    const close = el('button', { type: 'button', title: 'Kapat (Esc)' }, 'Kapat');
+    const box = el('div', { class: 'box', role: 'dialog', 'aria-modal': 'true', 'aria-label': snapshot.title },
+      el('div', { class: 'bar' }, el('b', null, snapshot.title), close), snapshot.content.cloneNode(true));
+    const viewer = el('div', { class: 'viewer announcement-viewer' }, box);
+    const done = () => {
+      viewer.remove();
+      announcementViewer = null;
+      document.removeEventListener('keydown', onKey, true);
+      renderAnnouncement();
+      restoreAfterViewer(wasPanelOpen, previous);
+    };
+    const onKey = ev => viewerKeys(ev, box, done);
+    close.addEventListener('click', done);
+    viewer.addEventListener('click', ev => { if (ev.target === viewer) done(); });
+    document.addEventListener('keydown', onKey, true);
+    dismissedAnnouncement = snapshot.signature;
+    announcementEl.hidden = true;
+    announcementViewer = viewer;
+    hidePanel();
+    shadowRoot.append(viewer);
+    close.focus();
+  }
+
+  function compactAnnouncement() {
+    duyuruQueued = false;
+    if (!compactDuyuru || !announcementEl || contextGone) return;
+    const body = document.getElementById('duyuruicerik');
+    const pop = body && body.closest('.dx-overlay-content');
+    if (!pop || !visible(pop) || closingAnnouncements.has(pop)) return;
+    const buttons = [...pop.querySelectorAll('.dx-button, button')].filter(b => !body.contains(b) && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
+    const close = buttons.find(b => norm(b.textContent.trim()) === 'kapat')
+      || buttons.find(b => norm(b.textContent.trim()) === 'tekrar gosterme');
+    if (!close) return;
+    let snapshot;
+    try { snapshot = announcementSnapshot(body, pop); } catch { return; }
+    // Aktarılamayan (ör. iframe içeren) duyuru UYAP'ın kendi penceresinde okunabilir kalır.
+    if (!snapshot) return;
+    const changed = !lastAnnouncement || snapshot.signature !== lastAnnouncement.signature;
+    lastAnnouncement = snapshot;
+    if (changed) renderAnnouncement();
+    closingAnnouncements.add(pop);
+    close.click();
+    setTimeout(() => closingAnnouncements.delete(pop), 250);
+  }
+
+  function queueAnnouncement() {
+    if (compactDuyuru && !duyuruQueued && !contextGone) { duyuruQueued = true; setTimeout(compactAnnouncement, 50); }
+  }
+  new MutationObserver(queueAnnouncement).observe(document.documentElement, {
+    childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden']
+  });
+  function applyAnnouncementPref(prefs) {
+    const next = !prefs || prefs.duyuruBildirim !== false;
+    if (compactDuyuru && !next && announcementEl && !announcementEl.hidden) openAnnouncement();
+    compactDuyuru = next;
+    renderAnnouncement();
+    queueAnnouncement();
+  }
+  chrome.storage.local.get('uhdPrefs').then(({ uhdPrefs }) => applyAnnouncementPref(uhdPrefs)).catch(error => {
+    if (invalidated(error)) stopInvalidatedContext();
   });
   chrome.storage.onChanged.addListener((ch, area) => {
-    if (area === 'local' && ch.uhdPrefs) hideDuyuru = !!(ch.uhdPrefs.newValue && ch.uhdPrefs.newValue.duyuruGizle);
+    if (area === 'local' && ch.uhdPrefs) applyAnnouncementPref(ch.uhdPrefs.newValue);
   });
 
   // ---------------------------------------------------------------- Mesajlar
