@@ -814,6 +814,11 @@
 
   async function openFile(rec, fresh) {
     if (opening) { toast('Önceki dosya hâlâ açılıyor…', '', 3000); return false; }
+    panelPausedForAccessibility = false;
+    evrakRequestEpoch++;
+    evrakBusy = false;
+    closeDocumentViewer(false);
+    if (dosyaPanel) dosyaPanel.close(false);
     opening = true;
     hidePanel();
     const title = `${rec.dosyaNo} · ${rec.birimAdi}`;
@@ -873,10 +878,15 @@
   const PAGE_CSS = `
 :host{--shell-bg:#fff;--shell-soft:#f5f7fb;--shell-text:#1d2939;--shell-muted:#667085;--shell-line:#e3e8f2;--shell-accent:${BRAND.primary};--shell-warn-bg:#fff4e5;--shell-warn-text:#7a4b00;--shell-error:#b42318}
 :host([data-theme=dark]){--shell-bg:#18222d;--shell-soft:#0f1720;--shell-text:#e6edf3;--shell-muted:#a8b5c3;--shell-line:#3a4756;--shell-accent:#7fd6cc;--shell-warn-bg:#33270f;--shell-warn-text:#f5c26b;--shell-error:#f97066;color-scheme:dark}
-.launch{position:fixed;right:0;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;background:${BRAND.primary};color:#fff;border:0;
+.launch{position:fixed;right:0;top:clamp(116px,calc(50% - 112px),calc(100dvh - 76px));transform:translateY(-50%);writing-mode:vertical-rl;background:${BRAND.primary};color:#fff;border:0;
   border-radius:12px 0 0 12px;padding:16px 10px;min-width:40px;min-height:104px;font:600 12px "Segoe UI",system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 16px rgba(16,75,73,.24);z-index:1;transition:background .15s,box-shadow .15s}
 .launch:hover{background:${BRAND.primaryDark};box-shadow:0 6px 20px rgba(16,75,73,.32)}
 .launch[aria-expanded=true]{visibility:hidden}
+.launch-tip{position:fixed;right:52px;top:clamp(116px,calc(50% - 112px),calc(100dvh - 76px));transform:translateY(-50%);z-index:3;width:min(270px,calc(100vw - 68px));box-sizing:border-box;padding:12px 14px;border:1px solid var(--shell-line);border-radius:12px;background:var(--shell-bg);color:var(--shell-text);box-shadow:0 8px 28px #0003;font:12px/1.45 "Segoe UI",system-ui,sans-serif}
+.launch-tip::after{content:"";position:absolute;right:-7px;top:calc(50% - 7px);width:12px;height:12px;background:var(--shell-bg);border-top:1px solid var(--shell-line);border-right:1px solid var(--shell-line);transform:rotate(45deg)}
+.launch-tip strong{display:block;font-size:13px;color:var(--shell-accent)}
+.launch-tip p{margin:5px 0 9px}.launch-tip button{border:0;border-radius:7px;background:${BRAND.primary};color:#fff;padding:6px 10px;font:inherit;font-weight:600;cursor:pointer}
+.launch-tip button:focus-visible{outline:3px solid ${BRAND.focus};outline-offset:2px}
 .panel{position:fixed;top:0;right:0;height:100vh;height:100dvh;width:var(--dock-width,min(480px,100vw));box-shadow:-8px 0 36px rgba(0,0,0,.2);z-index:2;overscroll-behavior:contain}
 .panel .panel-pin{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;padding:7px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer}
 .panel .panel-pin svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -947,9 +957,98 @@
 .viewer .dp-more{margin-top:10px;font-size:12px}
 [hidden]{display:none!important}
 `;
-  let panel, ui, launch, pinButton, toastEl, toastTimer, shadowRoot, focusBeforePanel, announcementEl;
+  let panel, ui, launch, introTip, pinButton, toastEl, toastTimer, shadowRoot, focusBeforePanel, announcementEl;
   let pagePrefs = {}, toastRemaining = 0, toastStarted = 0;
+  let prefsLoaded = false, prefsRevision = 0, pinSaving = false, panelEpoch = 0, outsideCloseTimer = null;
+  let launcherIntroSeen = false, launcherIntroPending = false;
+  let accessMenuHeading = null, accessMenuOpen = false, panelPausedForAccessibility = false, accessMenuTimer = null;
   const pageDarkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  function syncPinAvailability() {
+    if (pinButton) pinButton.disabled = !prefsLoaded || pinSaving || contextGone;
+  }
+
+  function dismissLauncherIntro() {
+    launcherIntroSeen = true;
+    launcherIntroPending = false;
+    if (introTip) introTip.hidden = true;
+    chrome.storage.local.set({ uhdLauncherIntroPending: false }).catch(error => {
+      if (invalidated(error)) stopInvalidatedContext();
+    });
+  }
+
+  function applyLauncherIntro(pending) {
+    launcherIntroPending = !!pending;
+    if (!pending || !introTip) return;
+    if (launcherIntroSeen || (panel && !panel.hidden)) dismissLauncherIntro();
+    else introTip.hidden = accessMenuOpen;
+  }
+
+  function findAccessMenuHeading(root) {
+    if (root && root.nodeType === 3) root = root.parentElement;
+    if (!root || root.nodeType !== 1) return null;
+    const nodes = [root, ...root.querySelectorAll('h1,h2,h3,h4,b,strong,span,div,[role="heading"]')];
+    return nodes.find(node => norm([...node.childNodes].filter(child => child.nodeType === 3).map(child => child.textContent).join(' ').trim()) === 'erisilebilirlik menusu') || null;
+  }
+
+  function syncAccessMenu() {
+    accessMenuTimer = null;
+    const heading = accessMenuHeading;
+    let open = false;
+    if (heading && heading.isConnected && visible(heading)) {
+      for (let node = heading; node && node !== document.body && node !== document.documentElement; node = node.parentElement) {
+        const rect = node.getBoundingClientRect();
+        if (rect.width >= 280 && rect.height >= 200 && rect.left < innerWidth - 40 && rect.right >= innerWidth - 12) {
+          open = true;
+          break;
+        }
+      }
+    }
+    if (open === accessMenuOpen) return;
+    accessMenuOpen = open;
+    if (open) {
+      panelPausedForAccessibility = !panel.hidden;
+      if (panelPausedForAccessibility) hidePanel();
+      launch.hidden = true;
+      introTip.hidden = true;
+    } else {
+      launch.hidden = false;
+      if (panelPausedForAccessibility) {
+        panelPausedForAccessibility = false;
+        showPanel();
+      } else if (launcherIntroPending && !launcherIntroSeen) introTip.hidden = false;
+    }
+  }
+
+  function observeAccessMenu() {
+    accessMenuHeading = findAccessMenuHeading(document.body);
+    const observer = new MutationObserver(records => {
+      if (!accessMenuHeading || !accessMenuHeading.isConnected) {
+        accessMenuHeading = null;
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            accessMenuHeading = findAccessMenuHeading(node);
+            if (accessMenuHeading) break;
+          }
+          if (accessMenuHeading) break;
+        }
+      }
+      if (accessMenuHeading || accessMenuOpen) {
+        clearTimeout(accessMenuTimer);
+        accessMenuTimer = setTimeout(syncAccessMenu, 120);
+      }
+    });
+    observer.observe(document.documentElement, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ['class', 'style', 'hidden', 'aria-hidden']
+    });
+    syncAccessMenu();
+  }
+
+  function cancelOutsideClose() {
+    if (outsideCloseTimer !== null) clearTimeout(outsideCloseTimer);
+    outsideCloseTimer = null;
+  }
 
   // Geçici stil kaldırılınca UYAP'ın kuralları aynen geri gelir; inline stillerine
   // veya uygulamanın DOM yapısına dokunmadan panel için ayrı alan açılır.
@@ -1064,16 +1163,21 @@
     host.style.cssText = 'all:initial;position:fixed;top:0;left:0;width:0;height:0;z-index:2147483646';
     document.documentElement.append(host);
     const shadow = host.attachShadow({ mode: 'closed' }); // UYAP sayfasındaki betikler panel içeriğini okuyamaz
-    launch = el('button', { class: 'launch', type: 'button', title: BRAND.name + ' · Dosyalarınızda ara', 'aria-label': BRAND.name + ' panelini aç', 'aria-expanded': 'false', 'aria-controls': 'legaluga-search-panel' }, 'Dosya Ara');
+    launch = el('button', { class: 'launch', type: 'button', title: BRAND.name + ' · Dosyalarınızda ara', 'aria-label': BRAND.name + ' panelini aç', 'aria-expanded': 'false', 'aria-controls': 'legaluga-search-panel' }, 'Legaluga Asistan');
+    const introDone = el('button', { type: 'button' }, 'Anladım');
+    introTip = el('div', { class: 'launch-tip', role: 'status', hidden: true },
+      el('strong', null, 'Legaluga Asistan burada'),
+      el('p', null, 'UYAP dosyalarınızda aramak için sağ kenardaki sekmeye tıklayın.'), introDone);
+    introDone.addEventListener('click', dismissLauncherIntro);
     panel = el('div', { class: 'panel', id: 'legaluga-search-panel', role: 'dialog', 'aria-label': BRAND.name, 'aria-modal': 'false', hidden: true });
     toastEl = el('div', { class: 'toast', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', hidden: true });
     announcementEl = el('div', { class: 'announcement', role: 'status', 'aria-live': 'polite', hidden: true });
-    shadow.append(el('style', null, PAGE_CSS), launch, panel, el('div', { class: 'notifications' }, toastEl, announcementEl));
+    shadow.append(el('style', null, PAGE_CSS), launch, introTip, panel, el('div', { class: 'notifications' }, toastEl, announcementEl));
     shadowRoot = shadow;
     ui = mountUI(panel, {
       mode: 'page',
       onOpen: r => openFile(r),
-      onOpenEvrak: (r, k) => openEvrak(r, k),
+      onOpenEvrak: (r, k, group) => openEvrak(r, k, group),
       onDosyaPanel: (r, tab) => openDosyaPanel(r, tab),
       onUpdate: async full => {
         const res = await startUpdate(full);
@@ -1082,7 +1186,7 @@
       onStop: () => stopUpdate(),
       onClose: () => hidePanel(true)
     });
-    pinButton = el('button', { class: 'panel-pin', type: 'button', 'aria-pressed': 'false' });
+    pinButton = el('button', { class: 'panel-pin', type: 'button', 'aria-pressed': 'false', disabled: true });
     const pinIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     pinIcon.setAttribute('viewBox', '0 0 24 24');
     pinIcon.setAttribute('aria-hidden', 'true');
@@ -1093,25 +1197,44 @@
     const header = ui.root.querySelector('header');
     if (header) header.insertBefore(pinButton, header.querySelector('.x'));
     pinButton.addEventListener('click', async () => {
-      pinButton.disabled = true;
+      pinSaving = true;
+      syncPinAvailability();
       try {
         const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
-        const next = { ...(uhdPrefs || {}), panelSabit: !pagePrefs.panelSabit };
+        // Depodaki son değeri değiştir; başka bir pencerenin güncellediği tercihi tersine çevirme.
+        const next = { ...(uhdPrefs || {}), panelSabit: !(uhdPrefs && uhdPrefs.panelSabit) };
         await chrome.storage.local.set({ uhdPrefs: next });
         applyPagePrefs(next);
       } catch (error) {
         if (invalidated(error)) stopInvalidatedContext();
         else toast('Panel tercihi kaydedilemedi. Tekrar deneyin.', 'err', 5000);
-      } finally { pinButton.disabled = false; }
+      } finally { pinSaving = false; syncPinAvailability(); }
     });
     applyPagePrefs(pagePrefs);
-    chrome.storage.local.get('uhdPrefs').then(v => applyPagePrefs(v.uhdPrefs)).catch(error => {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.uhdPrefs) {
+        prefsRevision++;
+        prefsLoaded = true;
+        applyPagePrefs(changes.uhdPrefs.newValue);
+        syncPinAvailability();
+      }
+      if (area === 'local' && changes.uhdLauncherIntroPending) applyLauncherIntro(changes.uhdLauncherIntroPending.newValue);
+    });
+    const initialPrefsRevision = prefsRevision;
+    chrome.storage.local.get('uhdPrefs').then(v => {
+      // İlk okuma, bu arada gelen storage.onChanged olayını geri almamalı.
+      if (prefsRevision === initialPrefsRevision) applyPagePrefs(v.uhdPrefs);
+      prefsLoaded = true;
+      syncPinAvailability();
+    }).catch(error => {
+      if (invalidated(error)) stopInvalidatedContext();
+      else { prefsLoaded = true; syncPinAvailability(); }
+    });
+    chrome.storage.local.get('uhdLauncherIntroPending').then(v => applyLauncherIntro(v.uhdLauncherIntroPending)).catch(error => {
       if (invalidated(error)) stopInvalidatedContext();
     });
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes.uhdPrefs) applyPagePrefs(changes.uhdPrefs.newValue);
-    });
     if (pageDarkMq && pageDarkMq.addEventListener) pageDarkMq.addEventListener('change', () => applyPagePrefs(pagePrefs));
+    observeAccessMenu();
     launch.addEventListener('click', () => {
       if (panel.hidden) showPanel();
       else hidePanel(true);
@@ -1126,9 +1249,14 @@
     // UYAP'ın tıklama işlemi bitsin; basılan öğe pointerdown ile click arasında kaymasın.
     // Gölge DOM içindeki tıklamaların hedefi host olarak görünür.
     document.addEventListener('click', e => {
-      if (!panel.hidden && !pagePrefs.panelSabit && e.target !== host) {
-        setTimeout(() => { if (!pagePrefs.panelSabit) hidePanel(); }, 0);
-      }
+      if (e.target === host) { cancelOutsideClose(); return; }
+      if (panel.hidden || !prefsLoaded || pagePrefs.panelSabit) return;
+      cancelOutsideClose();
+      const epoch = panelEpoch;
+      outsideCloseTimer = setTimeout(() => {
+        outsideCloseTimer = null;
+        if (panelEpoch === epoch && prefsLoaded && !pagePrefs.panelSabit) hidePanel();
+      }, 0);
     }, true);
     toastEl.addEventListener('mouseenter', pauseToast);
     toastEl.addEventListener('mouseleave', resumeToast);
@@ -1137,7 +1265,11 @@
   }
 
   function showPanel() {
-    if (!panel) return;
+    if (!panel || accessMenuOpen) return;
+    if (introTip && !introTip.hidden) dismissLauncherIntro();
+    else launcherIntroSeen = true;
+    cancelOutsideClose();
+    panelEpoch++;
     if (panel.hidden) focusBeforePanel = document.activeElement;
     panel.hidden = false;
     startPanelDock();
@@ -1148,6 +1280,8 @@
 
   function hidePanel(restoreFocus = false) {
     if (!panel || panel.hidden) return;
+    cancelOutsideClose();
+    panelEpoch++;
     panel.hidden = true;
     stopPanelDock();
     launch.setAttribute('aria-expanded', 'false');
@@ -1172,7 +1306,9 @@
     const pages = Math.min(Number(res.pageTotal) || 1, EVRAK_PAGES);
     for (let page = 1; ; page++) {
       if (res.tumEvraklar && typeof res.tumEvraklar === 'object') {
-        for (const arr of Object.values(res.tumEvraklar)) if (Array.isArray(arr)) out.push(...arr);
+        for (const [group, arr] of Object.entries(res.tumEvraklar)) {
+          if (Array.isArray(arr)) out.push(...arr.map(e => ({ ...e, dosyaGrubu: group })));
+        }
       } else if (Array.isArray(res.son20Evrak)) out.push(...res.son20Evrak);
       if (page >= pages) break;
       res = await api('list_dosya_evraklar.ajx', { dosyaId, pageNumber: page + 1 });
@@ -1209,10 +1345,12 @@
     return { blob: await res.blob(), type };
   }
 
-  let evrakBusy = false;
-  async function openEvrak(rec, key) {
+  let evrakBusy = false, evrakRequestEpoch = 0;
+  async function openEvrak(rec, key, group) {
     if (evrakBusy) return;
+    const epoch = ++evrakRequestEpoch;
     evrakBusy = true;
+    closeDocumentViewer(false);
     const title = `${rec.dosyaNo} ${rec.birimAdi}`;
     try {
       toast(`${title}\nEvrak UYAP'tan getiriliyor…`, 'busy');
@@ -1224,7 +1362,12 @@
         if (!dosyaId) throw new Error('Dosya UYAP’ta bulunamadı; Güncelle’ye basıp tekrar deneyin.');
         list = await rawEvraklar(dosyaId);
       }
-      const e = list.find(x => evrakKey(x) === key);
+      if (epoch !== evrakRequestEpoch) return;
+      const candidates = list.filter(x => evrakKey(x) === key);
+      const grouped = group ? candidates.filter(x => x.dosyaGrubu === group) : [];
+      const matches = grouped.length ? grouped : candidates;
+      if (matches.length > 1) throw new Error('Aynı bilgileri taşıyan birden fazla evrak var; yanlış evrakı açmamak için dosyayı UYAP’ta açın.');
+      const e = matches[0];
       if (!e) throw new Error('Evrak dosyanın evrak listesinde bulunamadı; Güncelle’ye basıp tekrar deneyin.');
       log('Evrak açılıyor:', e.tur);
       let doc;
@@ -1233,13 +1376,15 @@
         if (err instanceof Fatal || !e.dosyaId || e.dosyaId === dosyaId) throw err;
         doc = await viewDocument(e.evrakId, dosyaId);   // evrak kaydındaki dosya kimliği kabul edilmezse sorgudaki
       }
+      if (epoch !== evrakRequestEpoch) return;
       toastEl.hidden = true;
       showViewer(rec, e, doc);
     } catch (err) {
+      if (epoch !== evrakRequestEpoch) return;
       log('Evrak açılamadı:', err.message);
       toast(`${title}\nEvrak açılamadı: ${err.message}`, 'err', 0, { label: 'Dosyayı aç', fn: () => openFile(rec) });
     } finally {
-      evrakBusy = false;
+      if (epoch === evrakRequestEpoch) evrakBusy = false;
     }
   }
 
@@ -1283,7 +1428,10 @@
     return el('div', null, fmt(v));
   }
 
-  let dosyaPanel = null;
+  let dosyaPanel = null, documentViewer = null;
+  function closeDocumentViewer(restore = false) {
+    if (documentViewer) documentViewer.close(restore);
+  }
   function viewerKeys(ev, box, done) {
     if (ev.key === 'Escape') {
       ev.preventDefault();
@@ -1308,7 +1456,11 @@
   }
 
   function openDosyaPanel(rec, tab) {
-    if (dosyaPanel) dosyaPanel.close();
+    panelPausedForAccessibility = false;
+    evrakRequestEpoch++;
+    evrakBusy = false;
+    closeDocumentViewer(false);
+    if (dosyaPanel) dosyaPanel.close(false);
     const wasPanelOpen = !panel.hidden;
     const previous = shadowRoot.activeElement || document.activeElement;
     hidePanel();
@@ -1322,8 +1474,16 @@
       el('div', { class: 'bar' }, el('b', null, `${rec.dosyaNo} · ${rec.birimAdi}`), close), tabBar, body);
     const viewer = el('div', { class: 'viewer' }, box);
     const onKey = ev => viewerKeys(ev, box, done);
-    const done = () => { viewer.remove(); document.removeEventListener('keydown', onKey, true); dosyaPanel = null; restoreAfterViewer(wasPanelOpen, previous); };
-    close.addEventListener('click', done);
+    let closed = false;
+    const done = (restore = true) => {
+      if (closed) return;
+      closed = true;
+      viewer.remove();
+      document.removeEventListener('keydown', onKey, true);
+      if (dosyaPanel && dosyaPanel.viewer === viewer) dosyaPanel = null;
+      if (restore) restoreAfterViewer(wasPanelOpen, previous);
+    };
+    close.addEventListener('click', () => done());
     viewer.addEventListener('click', ev => { if (ev.target === viewer) done(); });
     document.addEventListener('keydown', onKey, true);
     const show = t => {
@@ -1339,7 +1499,7 @@
       const run = { ozet: () => loadOzet(rec, pane), sorgu: () => loadSorgu(rec, pane), safahat: () => loadSafahat(rec, pane) }[t];
       run().catch(err => pane.replaceChildren(el('div', { class: 'dp-err' }, `Alınamadı: ${err.message}`)));
     };
-    dosyaPanel = { close: done };
+    dosyaPanel = { viewer, close: done };
     shadowRoot.append(viewer);
     show(active);
     close.focus();
@@ -1451,6 +1611,7 @@
   }
 
   function showViewer(rec, e, doc) {
+    closeDocumentViewer(false);
     const wasPanelOpen = !panel.hidden;
     const previous = shadowRoot.activeElement || document.activeElement;
     const url = URL.createObjectURL(doc.blob);
@@ -1467,17 +1628,22 @@
       pdf ? el('iframe', { src: url, title: 'Evrak' })
         : el('div', { class: 'msg' }, `Bu evrak ${doc.type || 'bilinmeyen'} biçiminde; tarayıcı doğrudan gösteremiyor. “İndir” ile kaydedip açabilir ya da dosyayı UYAP’ta açabilirsiniz.`));
     const viewer = el('div', { class: 'viewer' }, box);
-    const done = () => {
+    let closed = false;
+    const done = (restore = true) => {
+      if (closed) return;
+      closed = true;
       viewer.remove();
       document.removeEventListener('keydown', onKey, true);
       setTimeout(() => URL.revokeObjectURL(url), 60000);   // yeni sekmede açıldıysa yüklenmesine zaman tanı
-      restoreAfterViewer(wasPanelOpen, previous);
+      if (documentViewer && documentViewer.viewer === viewer) documentViewer = null;
+      if (restore) restoreAfterViewer(wasPanelOpen, previous);
     };
     const onKey = ev => viewerKeys(ev, box, done);
-    close.addEventListener('click', done);
+    close.addEventListener('click', () => done());
     viewer.addEventListener('click', ev => { if (ev.target === viewer) done(); });
     document.addEventListener('keydown', onKey, true);
     hidePanel();
+    documentViewer = { viewer, close: done };
     shadowRoot.append(viewer);
     close.focus();
   }
@@ -1673,7 +1839,7 @@
     if (!msg || typeof msg.type !== 'string') return;
     if (msg.type === 'uhd-ping') send({ ok: true });
     else if (msg.type === 'uhd-open') { openFile(msg.record); send({ ok: true }); }
-    else if (msg.type === 'uhd-open-evrak') { openEvrak(msg.record, msg.key); send({ ok: true }); }
+    else if (msg.type === 'uhd-open-evrak') { openEvrak(msg.record, msg.key, msg.group); send({ ok: true }); }
     else if (msg.type === 'uhd-dosya-panel') { openDosyaPanel(msg.record, msg.tab); send({ ok: true }); }
     else if (msg.type === 'uhd-stop') { stopUpdate().then(() => send({ ok: true })); return true; }
     else if (msg.type === 'uhd-update') { startUpdate(msg.full).then(send); return true; }

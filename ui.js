@@ -144,6 +144,7 @@
 .uhd .evrak ul{margin:3px 0 0;padding:0;list-style:none}
 .uhd .evrak li{margin:3px 0;color:var(--text2)}
 .uhd .evrak li small{color:var(--muted)}
+.uhd .evrak-more{border:0;background:none;padding:2px 0;color:var(--ev-tx);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .uhd .lnk{border:1px solid var(--line2);background:var(--card);color:var(--text2);border-radius:5px;padding:3px 7px;min-height:26px;font-size:11px;cursor:pointer;margin-left:4px;vertical-align:1px}
 .uhd .lnk:hover{border-color:var(--focus);color:var(--navy)}
 .uhd .person,.uhd .durhead{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--text2)}
@@ -329,6 +330,7 @@
     let hearingRange = 'week';
     let shownLimit = LIMIT;
     let loaded = false;
+    let prefsRevision = 0;
     const dismissedNotices = new Set();
     let durusmaMeta = null;    // uhdDurusmalar: { at, gun, list }
     let durusmaByKey = new Map(); // kayıt key → yaklaşan duruşmalar (sıralı)
@@ -351,7 +353,8 @@
 
     const pref = (k, d) => (prefs[k] === undefined ? d : prefs[k]);
     async function setPref(k, v) {
-      prefs = { ...prefs, [k]: v };
+      const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
+      prefs = { ...(uhdPrefs || {}), [k]: v };
       await chrome.storage.local.set({ uhdPrefs: prefs });
     }
 
@@ -614,24 +617,49 @@
       return m ? `${m[2]} ${m[1]}` : g;
     }
 
+    const expandedEvrak = new Set();
+
     function evrakBlock(r, toks) {
       const u = unseenEvrak(r, goruldu);
       if (!u.length) return null;
       const seenBtn = el('button', { class: 'btn sm', title: 'Bu dosyadaki yeni evrakları görüldü olarak işaretle' }, icon('check'), 'Görüldü');
       seenBtn.addEventListener('click', e => { e.stopPropagation(); markSeen([r.key]); });
-      const lines = u.slice(0, EVRAK_SHOW).map(y => {
+      const makeLine = y => {
         // UYAP listeyi onay tarihine göre sıralar; sisteme gönderim tarihi farklıysa o da yazılır.
         const tarih = y.gonderim && y.gonderim !== y.onay ? `Onay ${y.onay} (sisteme gönderim ${y.gonderim})` : `Onay ${y.onay}`;
         const alt = [y.gonderen, evrakDosya(r, y.dosya), y.aciklama].filter(Boolean).join(' · ');
         return el('li', { title: [y.tur, tarih, y.gonderen, evrakDosya(r, y.dosya), y.aciklama].filter(Boolean).join('\n') },
           el('b', null, y.tur || 'Evrak'), ' · ', tarih,
-          ' ', evrakOpenBtn(r, y.k),
+          ' ', evrakOpenBtn(r, y.k, y.dosya),
           alt ? el('div', null, el('small', null, highlight(alt, toks))) : null);
-      });
-      if (u.length > EVRAK_SHOW) lines.push(el('li', null, el('small', null, `+${u.length - EVRAK_SHOW} evrak daha`)));
+      };
+      const lines = u.slice(0, EVRAK_SHOW).map(makeLine);
+      let isExpanded = expandedEvrak.has(r.key);
+      let extraLines = isExpanded ? u.slice(EVRAK_SHOW).map(makeLine) : [];
+      const moreText = () => isExpanded ? 'Daha az göster' : `+${u.length - EVRAK_SHOW} evrak daha · Tümünü göster`;
+      let moreRow = null;
+      if (u.length > EVRAK_SHOW) {
+        const more = el('button', { class: 'evrak-more', 'aria-expanded': String(isExpanded) }, moreText());
+        moreRow = el('li', null, more);
+        more.addEventListener('click', e => {
+          e.stopPropagation();
+          isExpanded = !isExpanded;
+          if (isExpanded) {
+            expandedEvrak.add(r.key);
+            extraLines = u.slice(EVRAK_SHOW).map(makeLine);
+            moreRow.before(...extraLines);
+          } else {
+            expandedEvrak.delete(r.key);
+            extraLines.forEach(line => line.remove());
+            extraLines = [];
+          }
+          more.setAttribute('aria-expanded', String(isExpanded));
+          more.textContent = moreText();
+        });
+      }
       return el('div', { class: 'evrak', onclick: e => e.stopPropagation() },
         el('div', { class: 'head' }, el('span', null, `${u.length} yeni evrak`), seenBtn),
-        el('ul', null, lines));
+        el('ul', null, lines, extraLines, moreRow));
     }
 
     async function markSeen(keys) {
@@ -659,15 +687,15 @@
       const s = lastEvrak(r);
       const title = s.gonderim && s.gonderim !== s.onay ? `Onay ${s.onay}, sisteme gönderim ${s.gonderim}` : `Onay ${s.onay}`;
       return el('div', { class: 'son', title: 'Dosyadaki en yeni evrak (son güncellemeye göre). ' + title }, el('span', { class: 'k' }, 'Son evrak: '), el('b', null, s.onay), t.slice(s.onay.length),
-        s.k ? [' ', evrakOpenBtn(r, s.k)] : null);
+        s.k ? [' ', evrakOpenBtn(r, s.k, s.dosya)] : null);
     }
 
     // ------------------------------------------------ evrak açma ve duruşmalar
 
-    function evrakOpenBtn(r, k) {
+    function evrakOpenBtn(r, k, dosya) {
       if (!k || !opts.onOpenEvrak) return null;
       const b = el('button', { class: 'lnk', title: 'Evrakı UYAP’tan getirip göster (evrak saklanmaz)' }, 'Aç');
-      b.addEventListener('click', e => { e.stopPropagation(); opts.onOpenEvrak(r, k); });
+      b.addEventListener('click', e => { e.stopPropagation(); opts.onOpenEvrak(r, k, dosya); });
       return b;
     }
 
@@ -1361,9 +1389,10 @@
     });
 
     render();
+    const initialPrefsRevision = prefsRevision;
     chrome.storage.local.get(['uhdIndex', 'uhdProgress', 'uhdNotes', 'uhdRecent', 'uhdPrefs', 'uhdEvrakGoruldu', 'uhdJob', 'uhdDurusmalar', 'uhdGizli']).then(v => {
       loaded = true;
-      prefs = v.uhdPrefs || {};
+      if (prefsRevision === initialPrefsRevision) prefs = v.uhdPrefs || {};
       applyTheme();
       durusmaMeta = v.uhdDurusmalar || null;
       gizli = v.uhdGizli || {};
@@ -1395,7 +1424,7 @@
       if (ch.uhdIndex || ch.uhdEvrakGoruldu) { renderFilters(); redraw = true; }
       if (ch.uhdNotes) { notes = ch.uhdNotes.newValue || {}; redraw = true; }
       if (ch.uhdRecent) recent = ch.uhdRecent.newValue || [];
-      if (ch.uhdPrefs) { prefs = ch.uhdPrefs.newValue || {}; applyTheme(); redraw = true; }
+      if (ch.uhdPrefs) { prefsRevision++; prefs = ch.uhdPrefs.newValue || {}; applyTheme(); redraw = true; }
       if (ch.uhdProgress) {
         progress = ch.uhdProgress.newValue || null;
         if (!records.length) redraw = true;   // ilk kullanım ekranındaki düğmenin durumu

@@ -48,12 +48,12 @@ async function openRecord(rec) {
 }
 
 // Evrak UYAP sekmesinde, sayfa içi görüntüleyicide açılır (evrakı UYAP oturumu getirir).
-async function openEvrak(rec, key) {
+async function openEvrak(rec, key, group) {
   const tab = await uyapTab();
   if (!tab) return noTab();
   await focusTab(tab);
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: 'uhd-open-evrak', record: rec, key });
+    await chrome.tabs.sendMessage(tab.id, { type: 'uhd-open-evrak', record: rec, key, group });
     closeIfWanted();
   } catch {
     ui.setNotice('UYAP sekmesi eklentiye yanıt vermedi. Sekmeyi yenileyip tekrar deneyin.', 'err', {

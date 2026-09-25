@@ -3,7 +3,8 @@
 // Ağ isteği yapmaz, veri okumaz; yalnız hangi sekmenin güncellemeyi yürüttüğünü (sekme numarası) tutar.
 
 // Kaldırılan modülün eski tercih ve geçici kayıtlarını güncellemede temizle.
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async details => {
+  if (details.reason === 'install') await chrome.storage.local.set({ uhdLauncherIntroPending: true });
   await chrome.storage.local.remove('ubh_prefs');
   await chrome.storage.session.remove(['ubh_banks', 'ubh_progress']);
 });
