@@ -3,8 +3,9 @@
 //   açık dosyaların evrak listesi alınır; evrak listesi önceki taramayla karşılaştırılıp yeni evraklar işaretlenir.
 //   Güncelleme kaldığı yerden sürdürülebilir bir iştir (uhdJob): sekme kapanırsa açık başka bir UYAP sekmesi,
 //   hiç yoksa UYAP bir sonraki açıldığında devralır; oturum düşerse yeniden girişte sürer.
-// - Dosya açma: Dosya Sorgulama ekranı açılır, form doldurulur, Sorgula'ya basılır,
-//   sonuçta ilgili satırın "Pencere Görünümü" düğmesine tıklanır.
+// - Dosya açma: varsa açık dosya penceresi kapanır; Dosya Sorgulama ekranı ve uygun
+//   sonuç listesi kullanılır. Gerekirse seçimler değiştirilip sorgu yapılır; ardından
+//   ilgili satırın "Pencere Görünümü" düğmesine tıklanır.
 (() => {
   if (window.__uhdLoaded) return;
   window.__uhdLoaded = true;
@@ -95,12 +96,30 @@
     return /extension context invalidated|context invalidated/i.test(String(error?.message || error));
   }
   function stopInvalidatedContext() {
+    if (contextGone) return;
     contextGone = true;
+    panelPausedForAccessibility = false;
     hidePanel();
+    if (introTip) introTip.hidden = true;
+    if (launch) {
+      launch.textContent = 'Legaluga · Yenile';
+      launch.title = 'Eklenti güncellendi; UYAP sayfasını yenileyin';
+      launch.setAttribute('aria-label', 'Eklenti güncellendi; UYAP sayfasını yenile');
+      launch.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        location.reload();
+      }, true);
+    }
     if (job) job.lost = true;
     if (resumeInterval !== null) clearInterval(resumeInterval);
     if (autoInterval !== null) clearInterval(autoInterval);
   }
+  window.addEventListener('unhandledrejection', event => {
+    if (!invalidated(event.reason)) return;
+    event.preventDefault();
+    stopInvalidatedContext();
+  });
   function contextAvailable() {
     if (contextGone) return false;
     try {
@@ -590,15 +609,7 @@
   const onFormPage = () => location.pathname === '/dosya-sorgulama';
 
   async function gotoForm(path, fresh) {
-    if (!fresh) {
-      if (onFormPage()) {
-        // Form ancak yeniden oluşturulunca adres parametrelerini okur: boş bir sayfaya geçip geri dön.
-        spaPush('/uhd-gecis');
-        await waitFor(() => !document.getElementById('yargiTur') && !document.getElementById('table-dosya-sorgulama'), 3000).catch(() => {});
-        await sleep(60);
-      }
-      spaPush(path);
-    }
+    if (!fresh && !onFormPage()) spaPush(path);
     const ok = await waitFor(() => onFormPage() && (document.getElementById('yargiTur') || detayliToggle()), 15000).catch(() => null);
     if (!ok) return false;
     if (!document.getElementById('yargiTur')) {
@@ -620,7 +631,7 @@
     const read = () => norm((document.getElementById(id) || {}).value || '');
     const input = await waitFor(() => document.getElementById(id), 8000, `“${id}” alanı bulunamadı.`);
     // Adres parametreleriyle gelen değer, seçenek listesi yüklenince görünür.
-    if (await waitFor(() => read() === want, prefillWait).then(() => true, () => false)) return;
+    if (read() === want || (!read() && await waitFor(() => read() === want, prefillWait).then(() => true, () => false))) return false;
 
     const box = input.closest('.dx-dropdowneditor') || input.parentElement;
     input.click();
@@ -641,23 +652,26 @@
     }
     item.click();
     await waitFor(() => read() === want, 4000, `UYAP formunda “${text}” seçilemedi.`);
+    return true;
   }
 
   async function setSwitch(on) {
     const sw = document.getElementById('dosya-durumu-detayli-arama');
-    if (!sw) return;
+    if (!sw) return false;
     const isOn = () => sw.classList.contains('dx-switch-on-value') || sw.getAttribute('aria-checked') === 'true';
-    if (isOn() === on) return;
+    if (isOn() === on) return false;
     sw.click();
     await waitFor(() => isOn() === on, 3000, 'Dosya durumu (açık/kapalı) değiştirilemedi.');
     await sleep(250);
+    return true;
   }
 
   async function ensureForm(rec) {
-    await setSelect('yargiTur', rec.yargiTuruAdi, 2000);
+    let changed = await setSelect('yargiTur', rec.yargiTuruAdi, 2000);
     const birim = await waitFor(() => document.getElementById('yargiBirim'), 4000).catch(() => null);
-    if (birim) await setSelect('yargiBirim', rec.birimTuruAdi, 6000);
-    await setSwitch(rec.sorguDurum !== 1);
+    if (birim) changed = (await setSelect('yargiBirim', rec.birimTuruAdi, 6000)) || changed;
+    changed = (await setSwitch(rec.sorguDurum !== 1)) || changed;
+    return changed;
   }
 
   const log = (...a) => console.info('[Legaluga]', ...a);
@@ -790,6 +804,33 @@
     return all[all.length - 1] || null;
   }
 
+  async function findResultButton(rec, queryButton) {
+    let btn = await locateOnGrid(rec);
+    for (let n = 0; !btn && n < 30; n++) {
+      const more = moreLink();
+      if (!more) break;
+      const before = dataRows().length;
+      more.click();
+      if (queryButton) await waitIdle(queryButton);
+      else await waitFor(() => dataRows().length > before || !visible(more), 10000).catch(() => {});
+      btn = await locateOnGrid(rec);
+    }
+    return btn;
+  }
+
+  // UYAP'ın dosya detay penceresi açıksa önce kendi Kapat düğmesiyle kapat.
+  // Başka bir modalın (ör. duyuru veya onay penceresi) düğmesine dokunma.
+  async function closeOpenFilePopup() {
+    const popup = [...document.querySelectorAll('.dosya-sorgula-popup .dx-overlay-content')].find(visible);
+    if (!popup) return false;
+    const close = [...popup.querySelectorAll('button[aria-label], .dx-closebutton')]
+      .find(b => visible(b) && (norm(b.getAttribute('aria-label') || '') === 'kapat' || b.classList.contains('dx-closebutton')));
+    if (!close) throw new Error('Açık dosya penceresinin Kapat düğmesi bulunamadı.');
+    close.click();
+    await waitFor(() => !visible(popup), 5000, 'Açık dosya penceresi kapanmadı.');
+    return true;
+  }
+
   // Dosya penceresinde istenen sekmeye (Evrak / Taraf bilgileri) geç; sekme yoksa hiçbir şeye basma.
   async function gotoTab(rec) {
     const { uhdPrefs } = await chrome.storage.local.get('uhdPrefs');
@@ -824,7 +865,8 @@
     const title = `${rec.dosyaNo} · ${rec.birimAdi}`;
     const step = (n, text) => log(`${n}/4`, text) || toast(`${title}\n${n}/4 · ${text}`, 'busy');
     try {
-      step(1, 'Dosya Sorgulama ekranı açılıyor…');
+      if (await closeOpenFilePopup()) log('Önceki dosya penceresi kapatıldı.');
+      step(1, onFormPage() ? 'Dosya Sorgulama ekranı kontrol ediliyor…' : 'Dosya Sorgulama ekranı açılıyor…');
       const path = openPath(rec);
       if (!(await gotoForm(path, fresh))) {
         if (job || fresh) throw new Error('Dosya Sorgulama ekranı açılamadı.');
@@ -832,19 +874,28 @@
         location.assign(path);
         return false;
       }
-      step(2, 'Form dolduruluyor…');
-      await ensureForm(rec);
-      step(3, 'UYAP’ta sorgulanıyor…');
-      const btnQuery = await runQuery();
-      const hadRows = freshRows().length > 0;
+      step(2, 'Form seçimleri kontrol ediliyor…');
+      const formChanged = await ensureForm(rec);
+      const listReady = !formChanged && dataRows().some(visible);
+      let btnQuery = findButton('Sorgula');
+      let hadRows;
+      if (listReady) {
+        step(3, 'Mevcut sonuç listesi kullanılıyor…');
+        hadRows = true;
+      } else {
+        step(3, 'UYAP’ta sorgulanıyor…');
+        btnQuery = await runQuery();
+        hadRows = freshRows().length > 0;
+      }
       step(4, 'Dosya sonuçlarda aranıyor…');
-      let btn = await locateOnGrid(rec);
-      for (let n = 0; !btn && n < 30; n++) {
-        const more = moreLink();
-        if (!more) break;
-        more.click();
-        await waitIdle(btnQuery);
-        btn = await locateOnGrid(rec);
+      let btn = await findResultButton(rec, btnQuery);
+      if (!btn && listReady) {
+        // Form aynı olsa bile mevcut tablo başka bir daraltılmış sorgudan kalmış olabilir.
+        log('Dosya mevcut listede yok; sorgu bir kez yenileniyor.');
+        toast(`${title}\nMevcut listede dosya yok; sorgu bir kez yenileniyor…`, 'busy');
+        btnQuery = await runQuery();
+        hadRows = freshRows().length > 0;
+        btn = await findResultButton(rec, btnQuery);
       }
       if (!btn) {
         const why = gridDiagnosis(rec);
@@ -1184,7 +1235,8 @@
         if (!res.ok) ui.setNotice(res.error, 'err');
       },
       onStop: () => stopUpdate(),
-      onClose: () => hidePanel(true)
+      onClose: () => hidePanel(true),
+      onInvalidated: stopInvalidatedContext
     });
     pinButton = el('button', { class: 'panel-pin', type: 'button', 'aria-pressed': 'false', disabled: true });
     const pinIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1236,6 +1288,7 @@
     if (pageDarkMq && pageDarkMq.addEventListener) pageDarkMq.addEventListener('change', () => applyPagePrefs(pagePrefs));
     observeAccessMenu();
     launch.addEventListener('click', () => {
+      if (!contextAvailable()) return;
       if (panel.hidden) showPanel();
       else hidePanel(true);
     });
@@ -1265,7 +1318,7 @@
   }
 
   function showPanel() {
-    if (!panel || accessMenuOpen) return;
+    if (!panel || accessMenuOpen || !contextAvailable()) return;
     if (introTip && !introTip.hidden) dismissLauncherIntro();
     else launcherIntroSeen = true;
     cancelOutsideClose();

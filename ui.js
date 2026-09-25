@@ -308,6 +308,21 @@
       views, filters, notice, list, settings, live, status,
       el('footer', null, statusText, btnStop, btnUpdate));
     container.append(el('style', null, CSS), root);
+    // Eklenti yenilendiğinde eski content script UYAP sekmesinde kalabilir.
+    // Bu panelin depolama işlemlerini başlatmadan önce eski bağlamı durdur.
+    const mountedRuntimeId = (() => { try { return chrome.runtime && chrome.runtime.id; } catch { return null; } })();
+    if (opts.mode === 'page' && mountedRuntimeId) {
+      const guardInvalidated = event => {
+        let currentId;
+        try { currentId = chrome.runtime && chrome.runtime.id; } catch { currentId = null; }
+        if (currentId === mountedRuntimeId) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (opts.onInvalidated) opts.onInvalidated();
+      };
+      root.addEventListener('click', guardInvalidated, true);
+      root.addEventListener('keydown', guardInvalidated, true);
+    }
 
     let records = [];
     let meta = {};
