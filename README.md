@@ -8,13 +8,14 @@
 
 <p align="center">
   <strong>Dosyanızı isimle bulun. UYAP'ta tek tıkla açın.</strong><br>
-  UYAP Avukat Portalı için ücretsiz ve açık kaynaklı Chrome eklentisi.
+  UYAP Avukat Portalı için ücretsiz, kaynak kodu herkese açık Chrome eklentisi.
 </p>
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/legaluga-uyap-asistan%C4%B1/aicknihmpdcbfgidifffinnbgbghkmcn?hl=tr"><strong>⬇️ Chrome'a ekle</strong></a>
   &nbsp;·&nbsp; <a href="#nasıl-çalışır">Nasıl çalışır?</a>
   &nbsp;·&nbsp; <a href="#gizlilik">Gizlilik</a>
+  &nbsp;·&nbsp; <a href="#güvenlik-mimarisi">Güvenlik</a>
 </p>
 
 ---
@@ -79,8 +80,22 @@ Chrome eklentiyi bu klasörden çalıştırır; klasörü sonradan silmeyin veya
 
 [Gizlilik politikasını okuyun →](https://legaluga.com/gizlilik/uyap-asistani)
 
-## Açık kaynak ve önemli notlar
+## Güvenlik mimarisi
 
-Kaynak kodu [MIT lisansıyla](LICENSE) yayımlanır. Hata ve öneriler için [issue açabilirsiniz](https://github.com/hasanimer/legaluga-uyap-asistani/issues). Güvenlik açıklarını [özel bildirim kanalı üzerinden](SECURITY.md) iletin.
+| 🔒 İlke | Eklentide nasıl uygulanıyor? |
+| :--- | :--- |
+| **Dar yetki** | [Manifest V3](manifest.json) kullanılır. İzinler `storage` ve büyük dosya indeksleri için `unlimitedStorage` ile sınırlıdır; site erişimi yalnız `https://avukat.uyap.gov.tr/*` adresine verilir. |
+| **Veri cihazınızda** | Dosya indeksi, notlar ve tercihler Chrome'un `storage.local` alanında saklanır. Arama bu yerel indeks üzerinde çalışır. Eklentinin dosya verilerini alan bir Legaluga sunucusu veya telemetri servisi yoktur. |
+| **UYAP oturumu üzerinden işlem** | Güncelleme ve evrak görüntüleme istekleri UYAP adreslerine, tarayıcıdaki mevcut oturumla yapılır. Eklenti sizden UYAP parolası istemez. |
+| **Kontrol sizde** | Verileri ayarlardan silebilirsiniz. Yedek ancak **Yedekle** düğmesine bastığınızda yerel dosya olarak indirilir; geri yüklemede dosya biçimi ve bilinen veri alanları kontrol edilir. |
+| **Denetlenebilir kod** | [Kaynak kodu](https://github.com/hasanimer/legaluga-uyap-asistani) ve [güvenlik bildirimi yöntemi](SECURITY.md) açıktır. |
+
+**Yerel saklama şifreli kasa değildir.** İndirdiğiniz JSON yedeği ve CSV dosyaları şifrelenmez; bu dosyaları ve tarayıcı profilinizi koruyun.
+
+## Kaynak kodu ve lisans
+
+Eklentiyi mesleki işlerinizde ücretsiz kullanabilirsiniz. Kaynak kodunu inceleyebilir, değiştirebilir ve lisans koşullarıyla paylaşabilirsiniz. [MIT + Commons Clause lisansı](LICENSE), eklentinin kendisini veya işlevi esasen aynı kalan bir kopyasını ücret karşılığında sunma hakkı vermez; bunun için hak sahibinden ayrıca izin alınmalıdır. Bu satış kısıtı nedeniyle lisans, [OSI tanımına göre açık kaynak](https://opensource.org/faq) değildir. Daha önce MIT ile yayımlanan sürümlere bu yeni koşul geriye dönük uygulanmaz.
+
+Hata ve öneriler için [issue açabilirsiniz](https://github.com/hasanimer/legaluga-uyap-asistani/issues). Güvenlik açıklarını [özel bildirim kanalı üzerinden](SECURITY.md) iletin.
 
 Eklenti yalnız `avukat.uyap.gov.tr` üzerinde çalışır ve T.C. Adalet Bakanlığı veya UYAP'ın resmî ürünü değildir. Duruşma bilgilerini UYAP üzerinden doğrulayın.
