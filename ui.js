@@ -1330,7 +1330,7 @@
         el('h3', null, 'UYAP'),
         el('div', { class: 'box' },
           check('durusmaBildirim', true, 'Yaklaşan duruşmaları hatırlat', 'Bugün ve yarınki duruşmaları bildirir. Duruşmalar ekranına her zaman ulaşabilirsiniz.', () => autoNotice()),
-          check('duyuruBildirim', true, 'Duyuruları küçük bildirim olarak göster', 'UYAP duyuruları sağ altta görünür; tıklayınca tamamını okuyabilirsiniz. Kapatırsanız UYAP’ın normal duyuru penceresi açılır.')),
+          check('duyuruBildirim', true, 'Duyuruları bildirim olarak göster', 'Kesinti duyurusu UYAP Ana Sayfa’da, diğer duyurular sağ altta görünür. Metnin tamamını okuyabilir; boş alana tıklayarak kapatabilirsiniz.')),
 
         el('h3', null, 'Veriler'),
         el('div', { class: 'box' },
